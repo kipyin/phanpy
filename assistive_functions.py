@@ -6,11 +6,21 @@ Created on Sat Nov  4 17:33:44 2017
 @author: Kip
 """
 from functools import reduce
+import pandas as pd
 
-from tables import type_efficacy
 
+path = './data/csv/'
 
-type_efficacy = type_efficacy['damage_factor'].reshape(18, 18)[:-1, :-1]/100.
+with open(path + 'version_group_regions.csv') as csv_file:
+    version_group_regions = pd.read_csv(csv_file)
+
+with open(path + 'versions.csv') as csv_file:
+    versions = pd.read_csv(csv_file)
+
+with open(path + 'type_efficacy.csv') as csv_file:
+    type_efficacy = pd.read_csv(csv_file)
+
+type_efficacy = type_efficacy['damage_factor'].values.reshape(18, 18)[:-1, :-1]/100.
 
 
 def efficacy(atk_type, tar_types):
@@ -48,3 +58,51 @@ def efficacy(atk_type, tar_types):
     __efficacies = map(lambda x: type_efficacy[atk_type-1, x-1], tar_types)
 
     return reduce(lambda x, y: x * y, __efficacies)
+
+
+def which_version(identifier):
+    """Returns a triple VERSION_GROUP_ID, REGION_ID, VERSION_ID
+
+    Usage
+    -----
+        >>> VERSION_GROUP_ID, REGION_ID, VERSION_ID =
+        ...     which_version('firered')
+        >>> print(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
+        (7, 1, 10)
+
+    Parameters
+    ----------
+        identifier : The official name of a game;
+        should be in the following list:
+            red, blue, yellow, gold, silver, crystal,
+            ruby, sapphire, emerald, firered, leafgreen,
+            diamond, pearl, platinum, heartgold, soulsilver,
+            black, white, black-2, white-2,
+            x, y, omega-ruby, alpha-sapphire, sun, moon,
+
+    """
+    try:
+
+        __condition = versions["identifier"] == identifier
+        version_group_id = int(versions[__condition]["version_group_id"])
+
+        __condition = versions["identifier"] == identifier
+        version_id = int(versions[__condition]["id"])
+
+        __v_g_r = version_group_regions
+        __condition = __v_g_r["version_group_id"] == int(version_group_id)
+        region_id = int(__v_g_r[__condition]["region_id"])
+
+        return version_group_id, region_id, version_id
+
+    except TypeError:
+
+        raise TypeError(
+                        "The game name should be one of the following"
+                        " list:\nred, blue, yellow, gold, silver, "
+                        "crystal,\nruby, sapphire, emerald, firered, "
+                        "leafgreen,\ndiamond, pearl, platinum, "
+                        "heartgold, soulsilver,\nblack, white, "
+                        "black-2, white-2,\nx, y, omega-ruby, "
+                        "alpha-sapphire, sun, moon."
+                        )

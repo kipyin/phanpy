@@ -6,4 +6,4 @@ Created on Sat Nov  4 05:00:28 2017
 @author: Kip
 """
 
-__all__ = ['status', 'pokemon', 'move']
+# __all__ = ['status', 'pokemon', 'move', 'assistive_functions', 'tables']
