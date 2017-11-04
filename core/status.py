@@ -4,16 +4,9 @@ Created on Sat Nov  4 04:22:57 2017
 @author: Kip
 """
 
-import sys
-import os
-
-PACKAGE_PARENT = '.'
-SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-
 import numpy as np
 
-from .tables import ailments
+from mechanisms.tables import ailments
 
 clock = 1
 

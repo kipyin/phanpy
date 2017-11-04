@@ -12,7 +12,7 @@ import numpy as np
 
 from move import Move
 from status import Status
-import tables as tb
+import mechanisms.tables as tb
 
 
 # TODO: finish the doc string
