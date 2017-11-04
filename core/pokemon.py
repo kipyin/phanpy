@@ -12,10 +12,11 @@ import numpy as np
 
 from move import Move
 from status import Status
-import tables as tb
+import mechanisms.tables as tb
 
 
 # TODO: finish the doc string
+# FIXME: make the doc string PEP8-friendly
 class Pokemon():
     """A well-defined object capturing all relevant information about a
     pokémon regarding to battle simulation. Does not take abilities
@@ -100,17 +101,22 @@ class Pokemon():
     def __init__(self, which_pokemon, level=50):
 
         try:
-            if issubclass(type(which_pokemon), int):
-                pokemon_id = which_pokemon
+            if str(which_pokemon).isnumeric():
+                # If `which_pokemon` is a number between 1 and 802
+                __condition = tb.pokemon['id'] == which_pokemon
 
             elif type(which_pokemon) is str:
+                # Else if `which_pokemon` is a valid Pokémon name
                 __condition = tb.pokemon['identifier'] == which_pokemon
-                pokemon_id = int(tb.pokemon[__condition].id)
+
+            # Set the id depending on the case.
+            pokemon_id = int(tb.pokemon[__condition].id)
 
         except TypeError:
             raise TypeError("`pokemon` has to be an integer"
                             " or a pokemon's name.")
 
+        # Set the label corresponds to the given id in the DataFrame.
         LABEL = list(tb.pokemon[tb.pokemon["id"] == pokemon_id].index)[0]
 
         # ------------ Initialization from `pokemon.csv` ------------- #
@@ -154,12 +160,14 @@ class Pokemon():
         else:
             self.gender = 1
 
+        # Used in some damage calculations.
         self.happiness = self.base_happiness
 
+        # Set the types of the Pokémon
         __condition = tb.pokemon_types["pokemon_id"] == self.id
-
         self.types = list(tb.pokemon_types[__condition]["type_id"])
 
+        # Checks if `level` is valid.
         try:
             self.level = level
 
@@ -170,38 +178,50 @@ class Pokemon():
         if self.level not in range(1, 101):
             raise ValueError("Level should be in range(1,101).")
 
+        # Set the current experience given its level and growth rate.
+        # Not needed in battle, so I might remove this.
         __condition = ((tb.experience["growth_rate_id"] ==
                         self.growth_rate_id)
                        & (tb.experience["level"] == self.level))
-
         self.exp = tb.experience[__condition]["experience"]
 
         # ----------- BASE STAT, IV, & EV Initialization ------------- #
 
+        # Set the Pokémon's base stats.
         __condition = tb.pokemon_stats["pokemon_id"] == self.id
-
         __pokemon_base_stat = tb.pokemon_stats[__condition]["base_stat"].values
-
         self.base = pd.Series(data=__pokemon_base_stat,
                               index=self.STAT_NAMES)
 
+        # Pokémon's individual values are randomly generated.
+        # Each value is uniformly distributed between 1 and 31.
         self.iv = pd.Series(data=[np.random.randint(1, 31) for i in range(6)],
                             index=self.STAT_NAMES)
 
-        _cond = tb.pokemon_stats["pokemon_id"] == self.id
-
-        self.effort = pd.Series(data=list(tb.pokemon_stats[_cond]["effort"]),
+        # Set the Pokémon's base effort value.
+        # This is the amount the opponent would get upon defeating this
+        # Pokémon.
+        # Not needed in battle, but some holding items affect it.
+        # TODO: Either remove these codes or modify the held-items
+        # calculations.
+        __cond = tb.pokemon_stats["pokemon_id"] == self.id
+        self.effort = pd.Series(data=list(tb.pokemon_stats[__cond]["effort"]),
                                 index=self.STAT_NAMES)
 
-        self.ev = pd.Series(data=[0 for x in range(6)],
+        # Set the actual EV the Pokémon has. Defaults to 0.
+        # Needed for stats calculation.
+        self.ev = pd.Series(data=[0. for x in range(6)],
                             index=self.STAT_NAMES)
 
         # ------------------ NATURE Initialization ------------------- #
 
+        # Randomly assign a nature to the Pokémon.
         self.nature_id = np.random.randint(1, 25)
 
+        # Set the relevant info with respect to the Pokémon's nature.
+        # TODO: flavors are not needed in a battle, so I might remove
+        # them in the future.
         __id = self.nature_id
-
         self.nature = pd.Series(index=["id", "name",
                                        "likes_flavor_id", "hates_flavor_id"],
                                 data=[self.nature_id,
@@ -211,6 +231,8 @@ class Pokemon():
 
         self.nature.name = self.nature.iloc[1]
 
+        # The nature affects one's stats. The nature usually raises one
+        # stat by 1.1 and lowers another by 0.9.
         __decreased_stat = np.array([1. for x in range(6)])
         __increased_stat = np.array([1. for x in range(6)])
 
@@ -223,22 +245,26 @@ class Pokemon():
                 __increased_stat[x-1] = 1.1
 
         __nature_modifier = __increased_stat * __decreased_stat
-
         self.nature_modifier = pd.Series(data=__nature_modifier,
                                          index=self.STAT_NAMES)
 
         # ------------------ STATS Initialization -------------------- #
 
-        __inner = (2 * self.base + self.iv + np.floor(self.ev/4)) * self.level
+        # Stats determination.
+        # `__inner` is common for both HP and other stats calculations.
 
-        __left_factor = np.floor(__inner/100) + 5
+        __inner = ((2. * self.base + self.iv + np.floor(self.ev/4.))
+                   * self.level)/100.
 
-        self.stats = np.floor(__left_factor * self.nature_modifier)
+        # For all the stats other than HP:
+        self.stats = np.floor((np.floor(__inner) + 5.) * self.nature_modifier)
 
-        self.stats.hp = np.floor(__inner.hp/100) + self.level + 10
+        # For HP:
+        self.stats.hp = np.floor(__inner.hp) + self.level + 10.
 
+        # Shedinja
         if self.name == 'shedinja':
-            self.stats.hp = 1
+            self.stats.hp = 1.
 
         self.stats = self.stats.reindex(self.STAT_NAMES)
 

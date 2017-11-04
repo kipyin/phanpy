@@ -4,14 +4,9 @@ Created on Sat Nov  4 04:22:57 2017
 @author: Kip
 """
 
-
-# from collections import deque
-import pandas as pd
 import numpy as np
 
-
-with open('./data/csv/move_meta_ailments.csv') as csv_file:
-    ailments = pd.read_csv(csv_file)
+from mechanisms.tables import ailments
 
 clock = 1
 
@@ -174,7 +169,3 @@ def test():
 
     print(new_combined.name, new_combined.start, new_combined.id,
           new_combined.remaining_round, new_combined.volatile)
-
-
-if __name__ == '__main__':
-    test()
