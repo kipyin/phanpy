@@ -15,6 +15,7 @@ with open('./data/csv/move_meta_ailments.csv') as csv_file:
 
 clock = 1
 
+
 # TODO: finish the __doc__ string.
 class Status():
     """A class containing all current statuses of a Pokémon.
@@ -51,6 +52,12 @@ class Status():
             These are the timestamps of when the statuses have been
             inflicted.
 
+    Built-in Methods:
+        __add__ :
+        __len__ :
+        __iter__ :
+
+
     See also:
     https://bulbapedia.bulbagarden.net/wiki/Status_condition
     """
@@ -72,6 +79,8 @@ class Status():
         self.start = np.array([__start], dtype=float)
         self.stop = np.array([__stop], dtype=float)
 
+        self.__current = 0
+
     @staticmethod
     def current_round():
         return clock
@@ -80,7 +89,38 @@ class Status():
     def remaining_round(self):
         return self.stop - self.current_round()
 
-    # TODO: when remaining_round hits 0, remove the status from the list.
+    def truncate(self, cond):
+        self.start = self.start[cond]
+        self.stop = self.stop[cond]
+        self.id = self.id[cond]
+        self.name = self.name[cond]
+        self.volatile = self.volatile[cond]
+
+    def update(self):
+        if 0 in self.remaining_round:
+            __stay = np.where(self.remaining_round != 0)
+            self.truncate(__stay)
+
+    def __str__(self):
+        return ', '.join(self.name)
+
+    def __repr__(self):
+        return ', '.join(self.name)
+
+    def __len__(self):
+        return len(self.name)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+
+        if self.__current >= len(self.id):
+            raise StopIteration
+
+        else:
+            self.__current += 1
+            return list(self.id)[self.__current - 1]
 
     def __add__(self, other):
         """Adds two statuses together.
@@ -105,17 +145,15 @@ class Status():
                 self.name[__nvol_pos_self] = other.name[__nvol_pos_other]
                 self.stop[__nvol_pos_self] = other.stop[__nvol_pos_other]
 
-                other.start = other.start[__vol_pos_other]
-                other.stop = other.stop[__vol_pos_other]
-                other.id = other.id[__vol_pos_other]
-                other.name = other.name[__vol_pos_other]
-                other.volatile = other.volatile[__vol_pos_other]
+                other.truncate(__vol_pos_other)
 
         self.id = np.append(self.id, other.id)
         self.name = np.append(self.name, other.name)
         self.start = np.append(self.start, other.start)
         self.stop = np.append(self.stop, other.stop)
         self.volatile = np.append(self.volatile, other.volatile)
+
+        self.update()
 
         return self
 
@@ -133,7 +171,8 @@ def test():
     clock += 1
     nightmare = Status(9, 5)
     new_combined = poison + nightmare + combined
-    print(new_combined.name, new_combined.start,
+
+    print(new_combined.name, new_combined.start, new_combined.id,
           new_combined.remaining_round, new_combined.volatile)
 
 
