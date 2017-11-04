@@ -1,3 +1,5 @@
+"""Run this file if cannot import modules properly
+"""
 import sys
 from pkg_resources import resource_filename
 pkg_path = resource_filename('mechanisms', 'core')

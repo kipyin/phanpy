@@ -262,14 +262,19 @@ class Pokemon():
         # For HP:
         self.stats.hp = np.floor(__inner.hp) + self.level + 10.
 
-        # Shedinja
+        # Shedinja always has at most 1 HP.
         if self.name == 'shedinja':
             self.stats.hp = 1.
 
+        # Reindex the stats dataframe to conform with the indices on
+        # the table.
         self.stats = self.stats.reindex(self.STAT_NAMES)
 
         # ------------------ ABILITY Initialization ------------------ #
 
+        # TODO: hidden abilities?
+        # TODO: possibilities for multiple abilities?
+        # Set the Pokémon's abilities.
         __cond = ((tb.pokemon_abilities["pokemon_id"] == self.id) &
                   (tb.pokemon_abilities["is_hidden"] == 0))
         __sample_space = tb.pokemon_abilities[__cond]["ability_id"]
@@ -277,19 +282,35 @@ class Pokemon():
 
         # ------- IN-BATTLE STATS and CONDITION Initialization --------#
 
+        # Set the in-battle only stats.
+        # Each stat has a stage and a value. We can calculate the values
+        # based on the stages every round.
         self.current = pd.Series(index=self.CURRENT_STAT_NAMES,
                                  data=list(self.stats) + [100., 100.])
 
         self.stage = pd.Series(index=self.CURRENT_STAT_NAMES + ['critical'],
                                data=[0 for x in range(9)])
 
+        # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
 
+        # Should items have their own class? Probably not?
         self.held_item = 0
 
+        # A flag showing if the critical stage has changed or not.
+        # TODO: Can be deduced from the event log?
         self.critical_stage_changed = 0
 
-        self._moves = deque()
+        # A Pokemon defaults to learn the last 4 learnable moves at its
+        # current level.
+        ___condition = ((tb.pokemon_moves["pokemon_id"] == self.id) &
+                        (tb.pokemon_moves["pokemon_move_method_id"] == 1) &
+                        (tb.pokemon_moves.level < self.level + 1))
+
+        __all_moves = tb.pokemon_moves[___condition]["move_id"]
+        __default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
+
+        self.moves = __default_moves
 
         # -------------------------- END ----------------------------- #
 
@@ -298,25 +319,6 @@ class Pokemon():
 
     def __repr__(self):
         return self.name
-
-    @property
-    def moves(self):
-        ___condition = ((tb.pokemon_moves["pokemon_id"] == self.id) &
-                        (tb.pokemon_moves["pokemon_move_method_id"] == 1) &
-                        (tb.pokemon_moves.level < self.level + 1))
-
-        __all_moves = tb.pokemon_moves[___condition]["move_id"]
-
-        # FIXME: this is resetting self._moves every time the moves
-        # property is called.
-        self._moves = deque([Move(x) for x in __all_moves.values[-4:]])
-
-        return self._moves
-
-    @moves.setter
-    def moves(self, move):
-        self._moves[0] = move
-        self._moves.rotate()
 
     def reset_current(self):
         """The current stats should be reset after each battle,
@@ -328,8 +330,4 @@ class Pokemon():
         self.stage = pd.Series(index=self.CURRENT_STAT_NAMES + ['critical'],
                                data=[0 for x in range(9)])
 
-        self.status.volatile = deque()
-
-    def ismobile(self):
-        pass
-
+        self.status = Status(0)
