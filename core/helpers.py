@@ -6,6 +6,7 @@ Created on Sat Nov  4 17:33:44 2017
 @author: Kip
 """
 from functools import reduce
+
 import pandas as pd
 
 
@@ -20,7 +21,8 @@ with open(path + 'versions.csv') as csv_file:
 with open(path + 'type_efficacy.csv') as csv_file:
     type_efficacy = pd.read_csv(csv_file)
 
-type_efficacy = type_efficacy['damage_factor'].values.reshape(18, 18)[:-1, :-1]/100.
+type_efficacy = type_efficacy['damage_factor'
+                              ''].values.reshape(18, 18)[:-1, :-1]/100.
 
 
 def efficacy(atk_type, tar_types):
