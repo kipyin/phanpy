@@ -6,19 +6,9 @@ Created on Sat Nov  4 16:08:21 2017
 @author: Kip
 """
 
-import pandas as pd
 import numpy as np
 
-path = './data/csv/'
-
-with open(path + 'moves.csv') as csv_file:
-    moves = pd.read_csv(csv_file)
-
-with open(path + 'move_meta.csv') as csv_file:
-    move_meta = pd.read_csv(csv_file)
-
-with open(path + 'move_meta_stat_changes.csv') as csv_file:
-    move_meta_stat_changes = pd.read_csv(csv_file)
+from tables import moves, move_meta, move_meta_stat_changes
 
 
 class Move():
