@@ -15,6 +15,7 @@ from status import Status
 import tables as tb
 
 
+# TODO: finish the doc string
 class Pokemon():
     """A well-defined object capturing all relevant information about a
     pokémon regarding to battle simulation. Does not take abilities
@@ -226,7 +227,7 @@ class Pokemon():
         self.nature_modifier = pd.Series(data=__nature_modifier,
                                          index=self.STAT_NAMES)
 
-        # ---------------------- STATS Initialization ---------------------- #
+        # ------------------ STATS Initialization -------------------- #
 
         __inner = (2 * self.base + self.iv + np.floor(self.ev/4)) * self.level
 
@@ -241,14 +242,14 @@ class Pokemon():
 
         self.stats = self.stats.reindex(self.STAT_NAMES)
 
-        # ---------------------- ABILITY Initialization --------------------- #
+        # ------------------ ABILITY Initialization ------------------ #
 
         __cond = ((tb.pokemon_abilities["pokemon_id"] == self.id) &
                   (tb.pokemon_abilities["is_hidden"] == 0))
         __sample_space = tb.pokemon_abilities[__cond]["ability_id"]
         self.ability = np.random.choice(__sample_space)
 
-        # ----------- IN-BATTLE STATS and CONDITION Initialization -----------#
+        # ------- IN-BATTLE STATS and CONDITION Initialization --------#
 
         self.current = pd.Series(index=self.CURRENT_STAT_NAMES,
                                  data=list(self.stats) + [100., 100.])
@@ -264,7 +265,7 @@ class Pokemon():
 
         self._moves = deque()
 
-        # ------------------------------ END -------------------------------- #
+        # -------------------------- END ----------------------------- #
 
     def __str__(self):
         return self.name
@@ -280,9 +281,11 @@ class Pokemon():
 
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
 
+        # FIXME: this is resetting self._moves every time the moves
+        # property is called.
         self._moves = deque([Move(x) for x in __all_moves.values[-4:]])
 
-        return  self._moves
+        return self._moves
 
     @moves.setter
     def moves(self, move):
