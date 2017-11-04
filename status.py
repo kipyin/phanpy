@@ -4,6 +4,7 @@ Created on Sat Nov  4 04:22:57 2017
 @author: Kip
 """
 
+
 # from collections import deque
 import pandas as pd
 import numpy as np
@@ -23,11 +24,14 @@ class Status():
     volatile, and the third lasts while a Pokémon is in battle. For our
     purposes, there is no point to make distinctions to the last two,
     so we combine them and call them 'volatile'.
+
     The csv files call it an 'ailment'.
+
     A `non-volatile` status is one of the following: paralysis, sleep,
     freeze, burn, and poison, with some sub-categories under each if
     they exist. Non-volatile statuses cannot stack; one Pokémon can
     only have one non-volatile status each time.
+
     A `volatile` status is the one that does not exist out side of a
     battle.Some classic examples would be confusion, ingrain,
     infatuation, etc. Onecan have multiple volatile statuses.
