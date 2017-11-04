@@ -7,7 +7,7 @@ Created on Sat Nov  4 15:56:47 2017
 """
 from collections import deque
 
-import pandas as pd
+from pandas import Series
 import numpy as np
 
 from move import Move
@@ -190,13 +190,13 @@ class Pokemon():
         # Set the Pokémon's base stats.
         __condition = tb.pokemon_stats["pokemon_id"] == self.id
         __pokemon_base_stat = tb.pokemon_stats[__condition]["base_stat"].values
-        self.base = pd.Series(data=__pokemon_base_stat,
-                              index=self.STAT_NAMES)
+        self.base = Series(data=__pokemon_base_stat,
+                           index=self.STAT_NAMES)
 
         # Pokémon's individual values are randomly generated.
         # Each value is uniformly distributed between 1 and 31.
-        self.iv = pd.Series(data=[np.random.randint(1, 31) for i in range(6)],
-                            index=self.STAT_NAMES)
+        self.iv = Series(data=[np.random.randint(1, 31) for i in range(6)],
+                         index=self.STAT_NAMES)
 
         # Set the Pokémon's base effort value.
         # This is the amount the opponent would get upon defeating this
@@ -205,13 +205,13 @@ class Pokemon():
         # TODO: Either remove these codes or modify the held-items
         # calculations.
         __cond = tb.pokemon_stats["pokemon_id"] == self.id
-        self.effort = pd.Series(data=list(tb.pokemon_stats[__cond]["effort"]),
-                                index=self.STAT_NAMES)
+        self.effort = Series(data=list(tb.pokemon_stats[__cond]["effort"]),
+                             index=self.STAT_NAMES)
 
         # Set the actual EV the Pokémon has. Defaults to 0.
         # Needed for stats calculation.
-        self.ev = pd.Series(data=[0. for x in range(6)],
-                            index=self.STAT_NAMES)
+        self.ev = Series(data=[0. for x in range(6)],
+                         index=self.STAT_NAMES)
 
         # ------------------ NATURE Initialization ------------------- #
 
@@ -222,12 +222,12 @@ class Pokemon():
         # TODO: flavors are not needed in a battle, so I might remove
         # them in the future.
         __id = self.nature_id
-        self.nature = pd.Series(index=["id", "name",
+        self.nature = Series(index=["id", "name",
                                        "likes_flavor_id", "hates_flavor_id"],
-                                data=[self.nature_id,
-                                      tb.natures.loc[__id, "identifier"],
-                                      tb.natures.loc[__id, "likes_flavor_id"],
-                                      tb.natures.loc[__id, "hates_flavor_id"]])
+                             data=[self.nature_id,
+                                   tb.natures.loc[__id, "identifier"],
+                                   tb.natures.loc[__id, "likes_flavor_id"],
+                                   tb.natures.loc[__id, "hates_flavor_id"]])
 
         self.nature.name = self.nature.iloc[1]
 
@@ -245,8 +245,8 @@ class Pokemon():
                 __increased_stat[x-1] = 1.1
 
         __nature_modifier = __increased_stat * __decreased_stat
-        self.nature_modifier = pd.Series(data=__nature_modifier,
-                                         index=self.STAT_NAMES)
+        self.nature_modifier = Series(data=__nature_modifier,
+                                      index=self.STAT_NAMES)
 
         # ------------------ STATS Initialization -------------------- #
 
@@ -285,11 +285,11 @@ class Pokemon():
         # Set the in-battle only stats.
         # Each stat has a stage and a value. We can calculate the values
         # based on the stages every round.
-        self.current = pd.Series(index=self.CURRENT_STAT_NAMES,
-                                 data=list(self.stats) + [100., 100.])
+        self.current = Series(index=self.CURRENT_STAT_NAMES,
+                              data=list(self.stats) + [100., 100.])
 
-        self.stage = pd.Series(index=self.CURRENT_STAT_NAMES + ['critical'],
-                               data=[0 for x in range(9)])
+        self.stage = Series(index=self.CURRENT_STAT_NAMES + ['critical'],
+                            data=[0 for x in range(9)])
 
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
@@ -324,10 +324,10 @@ class Pokemon():
         """The current stats should be reset after each battle,
         after changes made by leveling-up.
         """
-        self.current = pd.Series(index=self.CURRENT_STAT_NAMES,
-                                 data=list(self.stats) + [100., 100.])
+        self.current = Series(index=self.CURRENT_STAT_NAMES,
+                              data=list(self.stats) + [100., 100.])
 
-        self.stage = pd.Series(index=self.CURRENT_STAT_NAMES + ['critical'],
-                               data=[0 for x in range(9)])
+        self.stage = Series(index=self.CURRENT_STAT_NAMES + ['critical'],
+                            data=[0 for x in range(9)])
 
         self.status = Status(0)

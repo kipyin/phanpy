@@ -5,51 +5,53 @@ Created on Sat Nov  4 17:20:44 2017
 
 @author: Kip
 """
-import pandas as pd
+from pandas import read_csv
 
 from core.helpers import which_version
 
 
 path = './data/csv/'
 
+# FIXME: make these tables generation-friendly.
+
 with open(path + 'experience.csv') as csv_file:
-    experience = pd.read_csv(csv_file)
+    experience = read_csv(csv_file)
 
 with open(path + 'moves.csv') as csv_file:
-    moves = pd.read_csv(csv_file)
+    moves = read_csv(csv_file)
 
 with open(path + 'move_meta.csv') as csv_file:
-    move_meta = pd.read_csv(csv_file)
+    move_meta = read_csv(csv_file)
 
 with open(path + 'move_meta_ailments.csv') as csv_file:
-    ailments = pd.read_csv(csv_file)
+    ailments = read_csv(csv_file)
 
 with open(path + 'move_meta_stat_changes.csv') as csv_file:
-    move_meta_stat_changes = pd.read_csv(csv_file)
+    move_meta_stat_changes = read_csv(csv_file)
 
 with open(path + 'natures.csv') as csv_file:
-    natures = pd.read_csv(csv_file)
+    natures = read_csv(csv_file)
 
 with open(path + 'pokemon_abilities.csv') as csv_file:
-    pokemon_abilities = pd.read_csv(csv_file)
+    pokemon_abilities = read_csv(csv_file)
 
 with open(path + 'pokemon_moves.csv') as csv_file:
-    pokemon_moves = pd.read_csv(csv_file)
+    pokemon_moves = read_csv(csv_file)
 
 with open(path + 'pokemon_species.csv') as csv_file:
-    pokemon_species = pd.read_csv(csv_file)
+    pokemon_species = read_csv(csv_file)
 
 with open(path + 'pokemon_stats.csv') as csv_file:
-    pokemon_stats = pd.read_csv(csv_file)
+    pokemon_stats = read_csv(csv_file)
 
 with open(path + 'pokemon_types.csv') as csv_file:
-    pokemon_types = pd.read_csv(csv_file)
+    pokemon_types = read_csv(csv_file)
 
 with open(path + 'pokemon.csv') as csv_file:
-    pokemon = pd.read_csv(csv_file)
+    pokemon = read_csv(csv_file)
 
 with open(path + 'types.csv') as csv_file:
-    types = pd.read_csv(csv_file)
+    types = read_csv(csv_file)
 
 
 VERSION_GROUP_ID, REGION_ID, VERSION_ID = which_version('platinum')
