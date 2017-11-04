@@ -6,36 +6,37 @@ Created on Sat Nov  4 17:33:44 2017
 @author: Kip
 """
 from functools import reduce
+from typing import Iterable
 
-import pandas as pd
+from pandas import read_csv
 
 
 path = './data/csv/'
 
 with open(path + 'version_group_regions.csv') as csv_file:
-    version_group_regions = pd.read_csv(csv_file)
+    version_group_regions = read_csv(csv_file)
 
 with open(path + 'versions.csv') as csv_file:
-    versions = pd.read_csv(csv_file)
+    versions = read_csv(csv_file)
 
 with open(path + 'type_efficacy.csv') as csv_file:
-    type_efficacy = pd.read_csv(csv_file)
+    type_efficacy = read_csv(csv_file)
 
 type_efficacy = type_efficacy['damage_factor'
                               ''].values.reshape(18, 18)[:-1, :-1]/100.
 
 
-def efficacy(atk_type, tar_types):
+def efficacy(atk_type: int, tar_types: Iterable) -> float:
     """Returns an `int` that represents the type efficacy between the
     attack type and the target type(s).
 
     Usage
     -----
-        >>> efficacy(4,9)  # How effective is poison (4) against
+        >>> efficacy(4,[9])  # How effective is poison (4) against
         ...                  steel (9)?
         0  # poison moves have no effect on steel-type Pokémons.
 
-        >>> efficacy(17, [2, 14]]) # How effective is dark (17) against
+        >>> efficacy(17, [2, 14]) # How effective is dark (17) against
         ...     a Pokémon with a fighting (2) and psychic (14) type?
         1  # Because dark is 1/2 effective against fighting and twice as
         ...     effective against psychic.
@@ -45,7 +46,7 @@ def efficacy(atk_type, tar_types):
         atk_type : int
             The attacker's type. Up to Gen.6 this can only be one `int`.
         tar_types : array-like objects
-            Theoretically, the length of the array is not limited.
+            Technically, the length of the array is not limited.
             But for our purposes (calculating in-battle effectiveness),
             this is no more than two. Although no limitation is forced.
 
