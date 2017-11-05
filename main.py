@@ -52,7 +52,7 @@ def is_mobile(f, m):
 
     statuses = f.status.name
 
-    __absolutely_immobile = ['freeze', 'flinch', 'semi-invulnerable',
+    __absolutely_immobile = ['flinch', 'semi-invulnerable',
                              'taking-in-sunlight', 'withdrawing']
 
     for status in __absolutely_immobile:
@@ -69,6 +69,10 @@ def is_mobile(f, m):
 
         elif (('sleep' in statuses) and
               (m.name not in ['sleep-talk', 'snore'])):
+            return False
+
+        elif (('freeze' in statuses) and
+              ('defrost' not in m.flag.name)):
             return False
 
     return True
