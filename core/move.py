@@ -91,12 +91,11 @@ class Move():
         self.stat_chance = move_meta.loc[label, "stat_chance"].values[0]
 
         __condition = move_flag_map["move_id"] == self.id
-        self.flag = move_flag_map[__condition].values
+        self.flag = move_flag_map[__condition]
 
         if move_id in move_meta_stat_changes.move_id.values:
 
             __condition = move_meta_stat_changes["move_id"] == self.id
-
             self.stat_change = move_meta_stat_changes[__condition]
 
         self.name = self.identifier
