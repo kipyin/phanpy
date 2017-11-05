@@ -223,7 +223,7 @@ class Pokemon():
         # them in the future.
         __id = self.nature_id
         self.nature = Series(index=["id", "name",
-                                       "likes_flavor_id", "hates_flavor_id"],
+                                    "likes_flavor_id", "hates_flavor_id"],
                              data=[self.nature_id,
                                    tb.natures.loc[__id, "identifier"],
                                    tb.natures.loc[__id, "likes_flavor_id"],
@@ -324,6 +324,7 @@ class Pokemon():
         """The current stats should be reset after each battle,
         after changes made by leveling-up.
         """
+        # Reset the in-battle stats after switching out | after a battle.
         self.current = Series(index=self.CURRENT_STAT_NAMES,
                               data=list(self.stats) + [100., 100.])
 

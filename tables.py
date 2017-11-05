@@ -64,3 +64,13 @@ with open(path + 'pokemon.csv') as csv_file:
 
 with open(path + 'types.csv') as csv_file:
     types = read_csv(csv_file)
+
+
+custom_path = './data/csv/custom/'
+
+with open(custom_path + 'move_natural_gift.csv') as csv_file:
+    move_natural_gift = read_csv(csv_file)
+
+with open(custom_path + 'event_log.csv') as csv_file:
+    event_log = read_csv(csv_file)
+

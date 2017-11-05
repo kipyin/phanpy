@@ -388,6 +388,7 @@ def battle_finished(f1, f2):
 
 def is_mobile(f):
     """Checks if the Pokémon `f` is able to move in this turn or not.
+
     Returns
     -------
         is_mobile : Boolean
@@ -531,9 +532,11 @@ def main():
     """Single-battle Flow:
         Single Battle means each party chooses 1 Pokémon to participate
         in the battle. The party with no usable Pokémon loses.
+
         1. For each party:
             1.0 This party will (randomly) make a choice, where a choice
             is one of ["make_a_move", "use_an_item", "switch_pokemon"].
+
             1.1 If this party chooses to make a move, the program should
             first determine if one is able to use a move at all.
             Then, this party will (randomly/using an algorithm) choose
@@ -541,6 +544,7 @@ def main():
             "struggle".
             After this party has successfully chosen a move, end the
             turn.
+
             1.2 If this party chooses to use an item, choose which item
             to use. Then, if applicable, choose which Pokémon to
             apply the item.
@@ -552,6 +556,7 @@ def main():
             does not need to wait for the other party to make a choice.
             Issue: Heal block?
             Once the item is applied, end the turn.
+
             1.3 If the party chooses to switch to another Pokémon, the
             program should first check if such a choice is legal
             (probably by defining a function called `switchable()` which
@@ -559,7 +564,9 @@ def main():
             Once a choice is made, the switched Pokémon will receive
             any effect that it will possibly get due to some field
             effects. After the effects kick in, end the turn.
+
         2. The exact same process applies to the other party.
+
         3. After both parties have made their choices, the algorithm
         will determine if there is a battle or not.
         If the choices are any two of the following (with replacement):
@@ -567,6 +574,7 @@ def main():
             another Pokémon
         there will be no battle. Otherwise, do:
             battle(p1, m1, p2, m2)
+
         4. Once a battle has ended, go back to step #1.
     """
     global round_num, event, turn_num
@@ -617,3 +625,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
