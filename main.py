@@ -35,7 +35,7 @@ def priorities(p1, p1_move, p2, p2_move):
 
 
 def is_mobile(f, m):
-    """Checks if a pokemon is able to make a move this turn or not.
+    """Checks if a pokemon is able to make a move in this turn or not.
 
     Not be able to move if suffer from:
         {status: freeze},
@@ -78,4 +78,9 @@ def attack(f1, m1, f2):
     """f1 uses m1 to attack f2.
 
     Given f1 is mobile. Given f1 attacks first.
+
+    Moves with different meta-categories have different behaviors.
+    There are 14 different meta-categories according to veekun.com.
+    """
+
 
