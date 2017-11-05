@@ -10,7 +10,6 @@ import os
 import sys
 
 pkg_path = os.path.dirname(os.path.abspath(__file__))
-# pkg_path = pkg_path.replace('/mechanisms', '')
 
 if pkg_path not in sys.path:
     sys.path.append(pkg_path)
