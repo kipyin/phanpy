@@ -12,7 +12,7 @@ from typing import Iterable
 from pandas import read_csv
 
 
-path = './mechanisms/data/csv/'
+path = './data/csv/'
 
 with open(path + 'version_group_regions.csv') as csv_file:
     version_group_regions = read_csv(csv_file)
