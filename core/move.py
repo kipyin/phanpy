@@ -76,8 +76,8 @@ class Move():
         self.effect_id = moves.loc[label, "effect_id"].values[0]
         self.effect_chance = moves.loc[label, "effect_chance"].values[0]
 
-        self.category_id = move_meta.loc[label, "meta_category_id"].values[0]
-        self.ailment_id = move_meta.loc[label, "meta_ailment_id"].values[0]
+        self.meta_category_id = move_meta.loc[label, "meta_category_id"].values[0]
+        self.meta_ailment_id = move_meta.loc[label, "meta_ailment_id"].values[0]
         self.min_hits = move_meta.loc[label, "min_hits"].values[0]
         self.max_hits = move_meta.loc[label, "max_hits"].values[0]
         self.min_turns = move_meta.loc[label, "min_turns"].values[0]
