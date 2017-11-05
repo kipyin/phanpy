@@ -24,6 +24,9 @@ with open(path + 'moves.csv') as csv_file:
     __condition = moves["generation_id"] <= REGION_ID
     moves = moves[__condition]
 
+with open(path + 'move_flag_map.csv') as csv_file:
+    move_flag_map = read_csv(csv_file)
+
 with open(path + 'move_meta.csv') as csv_file:
     move_meta = read_csv(csv_file)
 

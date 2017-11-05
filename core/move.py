@@ -8,7 +8,8 @@ Created on Sat Nov  4 16:08:21 2017
 
 import numpy as np
 
-from mechanisms.tables import moves, move_meta, move_meta_stat_changes
+from mechanisms.tables import (moves, move_meta,
+                               move_meta_stat_changes, move_flag_map)
 
 
 class Move():
@@ -88,6 +89,9 @@ class Move():
         self.ailment_chance = move_meta.loc[label, "ailment_chance"].values[0]
         self.flinch_chance = move_meta.loc[label, "flinch_chance"].values[0]
         self.stat_chance = move_meta.loc[label, "stat_chance"].values[0]
+
+        __condition = move_flag_map["move_id"] == self.id
+        self.flag = move_flag_map[__condition].values
 
         if move_id in move_meta_stat_changes.move_id.values:
 
