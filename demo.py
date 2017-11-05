@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Nov  5 10:14:22 2017
-
 @author: Kip
 """
 
@@ -626,3 +625,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
