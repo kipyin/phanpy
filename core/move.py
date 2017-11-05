@@ -5,7 +5,6 @@ Created on Sat Nov  4 16:08:21 2017
 
 @author: Kip
 """
-
 import numpy as np
 
 from mechanisms.tables import (moves, move_meta,

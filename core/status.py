@@ -57,34 +57,70 @@ class Status():
     https://bulbapedia.bulbagarden.net/wiki/Status_condition
     """
 
-    def __init__(self, status_id, lasting_time=None):
+    def __init__(self, status, lasting_time=None):
 
-        __name = ailments[ailments["id"] == status_id]["identifier"].values[0]
-        __volatile = status_id not in range(0, 6)
+        global clock
+
+        if status in ailments.id.values:
+            # If the input is a valid id, get the status name from the
+            # table.
+            __cond = ailments["id"] == status
+            __name = ailments[__cond]["identifier"].values[0]
+            __status_id = status
+
+        elif status in ailments.identifiers.values:
+            # Else if the input is a valid status name, get the id
+            # from the table.
+            __cond = ailments["identifier"] == status
+            __name = status
+            __status_id = ailments[__cond]["id"].values[0]
+
+        else:
+            # If the input is neither, then that means it is a custom-
+            # defined Status. The status' name is the input, and the
+            # id is set to be a random 6-digit number in order to
+            # distinguish it from all the other status id's.
+            __name = status
+            __status_id = np.random.randint(100000, 199999)
+
+        # The status is of volatile type if its id is not in range(0,6).
+        # Otherwise, it is a non-volatile type.
+        __volatile = __status_id not in range(0, 6)
+
+        # Set the starting time to the current round number.
         __start = clock
 
         if lasting_time:
+            # If lasting_time is defined, calculate the stopping time.
             __stop = __start + lasting_time
+
         else:
+            # Otherwise, the status never ends.
             __stop = float('inf')
 
-        self.id = np.array([status_id], dtype=int)
+        self.id = np.array([__status_id], dtype=int)
         self.name = np.array([__name], dtype=str)
         self.volatile = np.array([__volatile], dtype=bool)
         self.start = np.array([__start], dtype=float)
         self.stop = np.array([__stop], dtype=float)
 
+        # A counter for __next__
         self.__current = 0
 
     @staticmethod
     def current_round():
+        # Returns the current round num
         return clock
 
     @property
     def remaining_round(self):
+        # Returns the remaining round num of the effect.
+        # Note that this is an n-dim array.
         return self.stop - self.current_round()
 
     def truncate(self, cond):
+        # Used in removing unwanted statuses.
+
         self.start = self.start[cond]
         self.stop = self.stop[cond]
         self.id = self.id[cond]
@@ -92,6 +128,8 @@ class Status():
         self.volatile = self.volatile[cond]
 
     def update(self):
+        # Remove any status with 0 lifetime left.
+
         if 0 in self.remaining_round:
             __stay = np.where(self.remaining_round != 0)
             self.truncate(__stay)
@@ -106,6 +144,8 @@ class Status():
         return len(self.name)
 
     def __iter__(self):
+        # Make Status iterable. I don't know where it can be used, but
+        # why not.
         return self
 
     def __next__(self):
