@@ -10,8 +10,8 @@ from collections import deque
 from pandas import Series
 import numpy as np
 
-from move import Move
-from status import Status
+from core.move import Move
+from core.status import Status
 import mechanisms.tables as tb
 
 
