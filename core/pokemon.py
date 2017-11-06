@@ -307,20 +307,25 @@ class Pokemon():
         # Should items have their own class? Probably not?
         self.held_item = 0
 
-        # A flag showing if the critical stage has changed or not.
-        # TODO: Can be deduced from the event log?
-        self.critical_stage_changed = 0
-
         # A Pokemon defaults to learn the last 4 learnable moves at its
         # current level.
         ___condition = ((tb.pokemon_moves["pokemon_id"] == self.id) &
                         (tb.pokemon_moves["pokemon_move_method_id"] == 1) &
                         (tb.pokemon_moves.level < self.level + 1))
 
+        # ------------------ Moves Initialization -------------------- #
+
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
         __default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
 
         self.moves = __default_moves
+
+        # --------------------- Miscellaneous ------------------------ #
+
+        # Any miscellaneous flags a Pokémon might have, such as
+        # 'critical-rate-changed'.
+        self.flags = []
+
 
         # -------------------------- END ----------------------------- #
 
