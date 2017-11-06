@@ -17,8 +17,19 @@ path = './data/csv/'
 with open(path + 'experience.csv') as csv_file:
     experience = read_csv(csv_file)
 
-with open(path + 'moves.csv') as csv_file:
+with open(path + 'items.csv') as csv_file:
+    items = read_csv(csv_file)
 
+with open(path + 'item_flags.csv') as csv_file:
+    item_flags = read_csv(csv_file)
+
+with open(path + 'item_flag_map.csv') as csv_file:
+    item_flag_map = read_csv(csv_file)
+
+with open(path + 'item_fling_effects.csv') as csv_file:
+    item_fling_effects = read_csv(csv_file)
+
+with open(path + 'moves.csv') as csv_file:
     moves = read_csv(csv_file)
 
     __condition = moves["generation_id"] <= REGION_ID
@@ -40,7 +51,6 @@ with open(path + 'pokemon_abilities.csv') as csv_file:
     pokemon_abilities = read_csv(csv_file)
 
 with open(path + 'pokemon_moves.csv') as csv_file:
-
     pokemon_moves = read_csv(csv_file)
 
     __condition = pokemon_moves["version_group_id"] == VERSION_GROUP_ID

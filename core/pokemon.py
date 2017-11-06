@@ -10,6 +10,7 @@ from collections import deque, defaultdict
 from pandas import Series
 import numpy as np
 
+from core.item import Item
 from core.move import Move
 from core.status import Status
 import mechanisms.tables as tb
@@ -306,9 +307,6 @@ class Pokemon():
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
 
-        # Should items have their own class? Probably not?
-        self.held_item = 0
-
         # A Pokemon defaults to learn the last 4 learnable moves at its
         # current level.
         ___condition = ((tb.pokemon_moves["pokemon_id"] == self.id) &
@@ -327,6 +325,9 @@ class Pokemon():
         # Any miscellaneous flags a Pokémon might have, such as
         # 'critical-rate-changed'.
         self.flags = defaultdict()
+
+        # Should items have their own class? Probably not?
+        self.item = Item(0)
 
         # -------------------------- END ----------------------------- #
 
