@@ -8,7 +8,9 @@ Created on Mon Nov  6 18:35:24 2017
 import numpy as np
 from pandas import Series, DataFrame
 
-from tables import items, item_fling_effects, item_flags, item_flag_map
+from core.status import Status
+from mechanisms.tables import (items, item_fling_effects,
+                               item_flags, item_flag_map)
 
 
 class Item():
@@ -69,3 +71,34 @@ class Item():
 
     def __repr__(self):
         return self.name
+
+    def fling(self, other):
+        """"Flings the item to the opponent.
+        Activates the item's effect.
+        """
+
+        fling_id = self.fling_effect.id
+
+        if fling_id == 1:
+            other.status += Status('badly-poison')
+
+        elif fling_id == 2:
+            other.status += Status('burn')
+
+        elif fling_id == 3:
+            # XXX: ...somehow uses f1's item on f2.
+            pass
+
+        elif fling_id == 4:
+            # XXX: ...somehow uses f1's herb on f2
+            pass
+
+        elif fling_id == 5:
+            other.status += Status('paralysis')
+
+        elif fling_id == 6:
+            other.status += Status('poison')
+
+        else:
+            # XXX: flinch if the opponent has not gone this turn.
+            pass

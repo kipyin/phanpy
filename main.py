@@ -10,6 +10,8 @@ import numpy as np
 from numpy.random import binomial, uniform
 
 from core.helpers import efficacy
+from core.status import Status
+from core.item import Item
 from tables import move_natural_gift as move_ng
 
 def priorities(p1, p1_move, p2, p2_move):
@@ -382,6 +384,12 @@ def power(f1, m1, f2):
         # this move will [fail]{mechanic:fail}.
 
         if 'embargo' not in f1.status:
+            f1.item.fling(f2)
+
+            if f1.item.fling_power:
+                return f1.item.fling_power
+        else:
+            return 0
 
 
 def direct_damage(f1, m1, f2):

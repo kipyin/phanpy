@@ -100,6 +100,7 @@ class Pokemon():
                           'specialDefence', 'speed', 'accuracy', 'evasion']
 
     def __init__(self, which_pokemon, level=50):
+        # XXX: the try-except clause does nothing..?
 
         try:
             if str(which_pokemon).isnumeric():
@@ -348,4 +349,4 @@ class Pokemon():
         self.stage = Series(index=self.__stage_stat_name,
                             data=[0 for x in range(9)])
 
-        self.status = Status(0)
+        # self.status = Status(0)

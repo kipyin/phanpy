@@ -254,6 +254,11 @@ class Status():
 
         return self
 
+    def remove_volatile(self):
+        """Removes any volatile status."""
+        # TODO: finish this.
+        pass
+
 
 def test():
 
