@@ -136,14 +136,13 @@ def hit_indicator(f1, m1, f2):
         # If the move's accuracy is not nan, use the regular hit rate
         # formula P = move's accuracy * user's accuracy / opponent's
         # evasion.
-        pr = m1.accuracy/100. * f1.stage_facotr.accuracy/f2.stage_factor.evasion
-        return binomial(1., pr)
+        p = m1.accuracy/100. * f1.stage_facotr.accuracy/f2.stage_factor.evasion
+        return binomial(1., p)
 
-    elif m1.effect_id == 18:
-        # If the move never misses
+    else:
+        # I haven't found any cases where the accuracy is nan and still
+        # has a chance to miss.
         return 1
-
-
 
 
 def attack(f1, m1, f2):
