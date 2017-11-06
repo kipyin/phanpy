@@ -5,7 +5,7 @@ Created on Sat Nov  4 15:56:47 2017
 
 @author: Kip
 """
-from collections import deque
+from collections import deque, defaultdict
 
 from pandas import Series
 import numpy as np
@@ -195,8 +195,10 @@ class Pokemon():
 
         # Pokémon's individual values are randomly generated.
         # Each value is uniformly distributed between 1 and 31.
-        self.iv = Series(data=[np.random.randint(1, 31) for i in range(6)],
-                         index=self.STAT_NAMES)
+        self.iv = Series(
+                    data=[np.random.random_integers(1, 31) for i in range(6)],
+                    index=self.STAT_NAMES
+                        )
 
         # Set the Pokémon's base effort value.
         # This is the amount the opponent would get upon defeating this
@@ -216,7 +218,7 @@ class Pokemon():
         # ------------------ NATURE Initialization ------------------- #
 
         # Randomly assign a nature to the Pokémon.
-        self.nature_id = np.random.randint(1, 25)
+        self.nature_id = np.random.random_integers(1, 25)
 
         # Set the relevant info with respect to the Pokémon's nature.
         # TODO: flavors are not needed in a battle, so I might remove
@@ -324,8 +326,7 @@ class Pokemon():
 
         # Any miscellaneous flags a Pokémon might have, such as
         # 'critical-rate-changed'.
-        self.flags = []
-
+        self.flags = defaultdict()
 
         # -------------------------- END ----------------------------- #
 
