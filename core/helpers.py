@@ -7,7 +7,6 @@ Created on Sat Nov  4 17:33:44 2017
 """
 from collections import namedtuple
 from functools import reduce
-from typing import Iterable
 
 from pandas import read_csv
 
@@ -27,7 +26,7 @@ type_efficacy = type_efficacy['damage_factor'
                               ''].values.reshape(18, 18)[:-1, :-1]/100.
 
 
-def efficacy(atk_type: int, tar_types: Iterable) -> float:
+def efficacy(atk_type, tar_types):
     """Returns an `int` that represents the type efficacy between the
     attack type and the target type(s).
 

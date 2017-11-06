@@ -110,6 +110,17 @@ class Status():
         # Set the starting time to the current round number.
         __start = clock
 
+        if __name in ['flying-up-high', 'undergound', 'underwater',
+                      'semi-invulnerable']:
+            # Add a semi_invulnerable flag to Status.
+            # A Pokémon is semi-invulnerable as long as one of the
+            # statuses is semi-invulnerable.
+            self.semi_invulnerable = True
+
+        else:
+
+            self.semi_invulnerable = False
+
         if lasting_time:
             # If lasting_time is defined, calculate the stopping time.
             __stop = __start + lasting_time
@@ -119,24 +130,24 @@ class Status():
             __stop = float('inf')
 
         self.id = np.array([__status_id], dtype='int64')
-        # The dtype '<U20' means that it is a little-endian unicode
-        # with a length of 20. In other words, it supports a maximum
-        # of 20-character name.
+        # The dtype '<U24' means that it is a little-endian unicode
+        # with a length of 24. In other words, it supports a maximum
+        # of 24-character name.
         #
         # For example, if I define a Status as follows:
         #
         # >>> my_status = Status('123456789012345678901234567890')
         #
-        # i.e. it is defined to have a 30-char name, but dtype='<U20'
-        # limits it to 20 chars. Therefore, if then we do
+        # i.e. it is defined to have a 30-char name, but dtype='<U24'
+        # limits it to 24 chars. Therefore, if then we do
         #
         # >>> my_status.name
         #
-        # We will only get array(['freeze', '12345678901234567890'],
-        # dtype='<U20').
-        # 20-char should be enought, as the longest statuses in game are
-        # 'infatuation', 'perish-song', 'telekinesis' (all 11-chars).
-        self.name = np.array([__name], dtype='<U20')
+        # We will only get array(['freeze', '123456789012345678901234'],
+        # dtype='<U24').
+        # 24-char should be enought, as the longest statuses in game is
+        # 'whipping-up-a-whirlwind' (23-chars).
+        self.name = np.array([__name], dtype='<U24')
         self.volatile = np.array([__volatile], dtype='bool')
         self.start = np.array([__start], dtype='float64')
         self.stop = np.array([__stop], dtype='float64')
@@ -236,6 +247,8 @@ class Status():
         self.start = np.append(self.start, other.start)
         self.stop = np.append(self.stop, other.stop)
         self.volatile = np.append(self.volatile, other.volatile)
+        self.semi_invulnerable = (self.semi_invulnerable or
+                                  other.semi_invulnerable)
 
         self.update()
 
@@ -257,7 +270,7 @@ def test():
     new_combined = poison + nightmare + combined
 
     res = [new_combined.name, new_combined.start, new_combined.id,
-           new_combined.remaining_round, new_combined.volatile]
+           new_combined.remaining_round, new_combined.semi_invulnerable]
 
     for i in res:
         print(i)
