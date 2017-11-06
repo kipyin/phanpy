@@ -10,8 +10,10 @@ from functools import reduce
 
 from pandas import read_csv
 
+from mechanisms.config import data_path
 
-path = './data/csv/'
+path = data_path
+
 
 with open(path + 'version_group_regions.csv') as csv_file:
     version_group_regions = read_csv(csv_file)

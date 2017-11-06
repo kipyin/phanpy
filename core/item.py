@@ -8,7 +8,7 @@ Created on Mon Nov  6 18:35:24 2017
 import numpy as np
 from pandas import Series, DataFrame
 
-from core.status import Status
+from mechanisms.core.status import Status
 from mechanisms.tables import (items, item_fling_effects,
                                item_flags, item_flag_map)
 

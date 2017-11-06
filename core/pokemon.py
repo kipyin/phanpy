@@ -10,9 +10,9 @@ from collections import deque, defaultdict
 from pandas import Series
 import numpy as np
 
-from core.item import Item
-from core.move import Move
-from core.status import Status
+from mechanisms.core.item import Item
+from mechanisms.core.move import Move
+from mechanisms.core.status import Status
 import mechanisms.tables as tb
 
 

@@ -6,11 +6,21 @@ Created on Sun Nov  5 14:22:39 2017
 @author: Kip
 """
 
+# """Activate these codes when import fails."""
+# import os
+# import sys
+#
+# file_path = os.path.dirname(os.path.abspath(__file__))
+# root_path = file_path.replace('/mechanisms', '')
+#
+# sys.path.append(root_path) if root_path not in sys.path else None
+
+
 import numpy as np
 from numpy.random import binomial, uniform
 
-from core.helpers import efficacy
-from tables import move_natural_gift
+from mechanisms.core.helpers import efficacy
+from mechanisms.tables import move_natural_gift
 
 
 def priorities(p1, p1_move, p2, p2_move):
@@ -596,6 +606,15 @@ def direct_damage(f1, m1, f2):
         # XXX: event-log
 
         pass
+
+    elif effect == 321:
+        # Inflicts damage equal to the user's remaining
+        # [HP]{mechanic:hp}.  User faints.
+
+        damage = f1.current.hp
+        f1.current.hp = 0
+
+        return damage
 
     else:
         # All cases up to Gen.5 should be covered.
