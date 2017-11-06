@@ -118,7 +118,7 @@ class Status():
             # Otherwise, the status never ends.
             __stop = float('inf')
 
-        self.id = np.array([__status_id], dtype=int)
+        self.id = np.array([__status_id], dtype='int64')
         # The dtype '<U20' means that it is a little-endian unicode
         # with a length of 20. In other words, it supports a maximum
         # of 20-character name.
@@ -137,9 +137,9 @@ class Status():
         # 20-char should be enought, as the longest statuses in game are
         # 'infatuation', 'perish-song', 'telekinesis' (all 11-chars).
         self.name = np.array([__name], dtype='<U20')
-        self.volatile = np.array([__volatile], dtype=bool)
-        self.start = np.array([__start], dtype=float)
-        self.stop = np.array([__stop], dtype=float)
+        self.volatile = np.array([__volatile], dtype='bool')
+        self.start = np.array([__start], dtype='float64')
+        self.stop = np.array([__stop], dtype='float64')
 
         # A counter for __next__
         self.__current = 0
