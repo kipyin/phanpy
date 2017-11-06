@@ -132,17 +132,17 @@ def hit_indicator(f1, m1, f2):
             # statement and go through the regular accuracy check.
             return 0
 
-    if not np.isnan(m1.accuracy):
+    if np.isnan(m1.accuracy):
+        # I haven't found any cases where the accuracy is nan and still
+        # has a chance to miss.
+        return 1
+
+    else:
         # If the move's accuracy is not nan, use the regular hit rate
         # formula P = move's accuracy * user's accuracy / opponent's
         # evasion.
         p = m1.accuracy/100. * f1.stage_facotr.accuracy/f2.stage_factor.evasion
         return binomial(1., p)
-
-    else:
-        # I haven't found any cases where the accuracy is nan and still
-        # has a chance to miss.
-        return 1
 
 
 def attack(f1, m1, f2):
@@ -155,6 +155,7 @@ def attack(f1, m1, f2):
     """
 
     # Determine if the move is hit or not.
+    modifier_hit = hit_indicator(f1, m1, f2)
 
     if m1.meta_category_id in [0, 4, 6, 7, 8]:
         pass
