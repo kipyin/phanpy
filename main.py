@@ -7,13 +7,15 @@ Created on Sun Nov  5 14:22:39 2017
 """
 
 import numpy as np
-from numpy.random import binomial
+from numpy.random import binomial, uniform
 
+from core.helpers import efficacy
+from tables import move_natural_gift as move_ng
 
 def priorities(p1, p1_move, p2, p2_move):
     """Determines the order of attack.
 
-    # FIXME: need to take effects into account, e.g.
+    # TODO: need to take effects into account, e.g.
     trick-room, quick-claw.
     """
 
@@ -135,6 +137,7 @@ def hit_indicator(f1, m1, f2):
     if np.isnan(m1.accuracy):
         # I haven't found any cases where the accuracy is nan and still
         # has a chance to miss.
+        # TODO: an exhaustive check on this.
         return 1
 
     else:
@@ -145,6 +148,343 @@ def hit_indicator(f1, m1, f2):
         return binomial(1., p)
 
 
+def critical_indicator(f1, m1, f2):
+    """Returns 2 if a hit is critical else 1 (Gen.II ~ Gen.V).
+
+    # TODO: moves exempt from critical hit calculation?
+    """
+    pass
+
+
+def power(f1, m1, f2):
+    """Retuns the power for all damaging moves.
+    """
+    effect = m1.effect_id
+
+    if effect == 100:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power varies inversely with the user's proportional remaining
+        # [HP]{mechanic:hp}.
+        #
+        # 64 * current HP / max HP | Power
+        # -----------------------: | ----:
+        #  0– 1                    |  200
+        #  2– 5                    |  150
+        #  6–12                    |  100
+        # 13–21                    |   80
+        # 22–42                    |   40
+        # 43–64                    |   20
+        #
+        # This table is not well-defined. Using the data from
+        # https://bulbapedia.bulbagarden.net/wiki/Flail_(move)
+
+        q = f1.current.hp / f1.stats.hp
+
+        if q < 0.0417:
+            return 200
+
+        elif q < 0.1042:
+            return 150
+
+        elif q < 0.2083:
+            return 100
+
+        elif q < 0.3542:
+            return 80
+
+        elif q < 0.6875:
+            return 40
+
+        else:
+            return 20
+
+    elif effect == 122:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power increases with [happiness]{mechanic:happiness},
+        # given by `happiness * 2 / 5`, to a maximum of 102.
+        # Power bottoms out at 1.
+
+        return np.clip(a=f1.happiness * 2./5.,
+                       a_max=102,
+                       a_min=1)
+
+    elif effect == 123:
+        # Randomly uses one of the following effects.
+        #
+        # Effect                                             | Chance
+        # -------------------------------------------------- | -----:
+        # Inflicts {mechanic:regular-damage} with 40 power   |    40%
+        # Inflicts {mechanic:regular-damage} with 80 power   |    30%
+        # Inflicts {mechanic:regular-damage} with 120 power  |    10%
+        # Heals the target for 1/4 its max {mechanic:hp}     |    20%
+        #
+        # On average, this move inflicts {mechanic:regular-damage}
+        # with 52 power and heals the target for 1/20 its max
+        # {mechanic:hp}.
+
+        # Using the Bayesian rule to calculate the probabilities.
+        # Inflicts damage 80% of the time, and heals the target 20% of
+        # the time.
+
+        inflict_damage = binomial(1, .8)
+
+        if inflict_damage:
+            # Given the move inflicts damage, there are .4/.8 chance to
+            # have 40 power, .3/.8 chance to have 80 power, and .1/.8
+            # chance to have 120 power.
+
+            q = uniform(0, 1)
+
+            if q < .125:
+                return 120
+
+            elif q < .5:
+                return 80
+
+            else:
+                return 40
+
+        else:
+            return -.25 * f2.stats.hp
+
+    elif effect == 124:
+        # Inflicts {mechanic:regular-damage}.
+        # Power increases inversely with {mechanic:happiness}, given by
+        # `(255 - happiness) * 2 / 5`, to a maximum of 102.
+        # Power bottoms out at 1.
+
+        return np.clip(a=(255-f1.happiness) * 2./5.,
+                       a_max=102,
+                       a_min=1)
+
+    elif effect == 127:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power is selected at random between 10 and 150, with an
+        # average of 71:
+        #
+        # Magnitude | Power | Chance
+        # --------: | ----: | -----:
+        #         4 |    10 |     5%
+        #         5 |    30 |    10%
+        #         6 |    50 |    20%
+        #         7 |    70 |    30%
+        #         8 |    90 |    20%
+        #         9 |   110 |    10%
+        #        10 |   150 |     5%
+        #
+        # This move has double power against Pokémon currently
+        # underground due to {move:dig}.
+
+        q = uniform(0, 1)
+
+        if q < .05:
+            return 10
+
+        elif q < .15:
+            return 30
+
+        elif q < .35:
+            return 50
+
+        elif q < .65:
+            return 70
+
+        elif q < .85:
+            return 90
+
+        elif q < .95:
+            return 110
+
+        else:
+            return 150
+
+    elif effect == 162:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power is equal to 100 times the amount of energy stored by
+        # []{move:stockpile}.
+        # Ignores the random factor in the damage formula.
+        # Stored energy is consumed, and the user's {mechanic:defense}
+        # and [Special Defense]{mechanic:special-defense} are reset to
+        # what they would be if []{move:stockpile} had not been used.
+        # If the user has no energy stored, this move will
+        # {mechanic:fail}.
+        # FIXME: pass
+        pass
+
+    elif effect == 197:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power increases with the target's weight in kilograms, to a
+        # maximum of 120.
+        #
+        # Target's weight | Power
+        # --------------- | ----:
+        # Up to 10kg      |    20
+        # Up to 25kg      |    40
+        # Up to 50kg      |    60
+        # Up to 100kg     |    80
+        # Up to 200kg     |   100
+        # Above 200kg     |   120
+
+        w = f2.weight
+
+        if w <= 10:
+            return 20
+
+        elif w <= 25:
+            return 40
+
+        elif w <= 50:
+            return 60
+
+        elif w <= 100:
+            return 80
+
+        elif w <= 200:
+            return 100
+
+        else:
+            return 120
+
+    elif effect == 220:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power increases with the target's current {mechanic:speed}
+        # compared to the user, given by
+        # `1 + 25 * target Speed / user Speed`, capped at 150.
+
+        return np.clip(a=(1 + 25. * f2.current.speed/f1.current.speed),
+                       a_max=150,
+                       a_min=0)
+
+    elif effect == 223:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power and type are determined by the user's held berry.
+        # The berry is consumed.  If the user is not holding a berry,
+        # this move will [fail]{mechanic:fail}.
+
+        # Relevant info is stored in
+        # `data/csv/custom/move_natural_gift.csv`.
+
+        move_ng = move_ng[move_ng["item_id"] == f1.item.id]
+        m1.type_id = move_ng["type_id"].values[0]
+
+        return move_ng["power"].values[0]
+
+    elif effect == 234:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power and type are determined by the user's
+        # {mechanic:held-item}. The item is consumed.
+        # If the user is not holding an item, or its item has no set
+        # type and power, this move will [fail]{mechanic:fail}.
+        #
+        # This move ignores []{ability:sticky-hold}.
+        #
+        # If the user is under the effect of []{move:embargo},
+        # this move will [fail]{mechanic:fail}.
+
+        if 'embargo' not in f1.status:
+
+
+def direct_damage(f1, m1, f2):
+    """Calculates the damage for moves deal direct damage.
+    """
+    effect = m1.effect_id
+
+    def immuned(damage):
+        """A simple filter for damage that takes typ-immunity into
+        account.
+        """
+        return 0 if efficacy(m1.type_id, f2.types) == 0 else damage
+
+    if effect == 27:
+        # User waits for two turns.
+        # On the second turn, the user inflicts twice the damage it
+        # accumulated on the last Pokémon to hit it.  Damage inflicted
+        # is [typeless]{mechanic:typeless}.
+        #
+        # This move cannot be selected by []{move:sleep-talk}.
+        # FIXME: event log
+        pass
+
+    elif effect == 41:
+        # Inflicts [typeless]{mechanic:typeless} damage equal to half
+        # the target's remaining [HP]{mechanic:hp}.
+        return f2.current.hp/2.
+
+    elif effect == 42:
+        # Inflicts 40 points of damage.
+        return immuned(40.)
+
+    elif effect == 88:
+        # Inflicts damage equal to the user's level.  Type immunity
+        # applies, but other type effects are ignored.
+        return immuned(f1.level)
+
+    elif effect == 89:
+        # Inflicts [typeless]{mechanic:typeless} damage between 50% and
+        # 150% of the user's level, selected at random in increments of
+        # 10%.
+        return f1.level * np.random.randint(5, 15)/10.
+
+    elif effect == 90:
+        # Targets the last opposing Pokémon to hit the user with a
+        # physical move this turn.
+        # Inflicts twice the damage that move did to the user.
+        # If there is no eligible target, this move will fail.
+        # Type immunity applies, but other type effects are ignored.
+        # FIXME; event log
+        pass
+
+    elif effect == 131:
+        # Inflicts exactly 20 damage.
+        # TODO: type-immunity?
+        return 20
+
+    elif effect == 145:
+        # Targets the last opposing Pokémon to hit the user with a
+        # [special]{mechanic:special} move this turn.
+        # Inflicts twice the damage that move did to the user.
+        # If there is no eligible target, this move will
+        # [fail]{mechanic:fail}.
+        # Type immunity applies, but other type effects are ignored.
+        # FIXME: event-log. Similar to effect 90.
+        pass
+
+    elif effect == 155:
+        # Inflicts {mechanic:typeless} {mechanic:regular-damage}.
+        # Every Pokémon in the user's party, excepting those that have
+        # fainted or have a {mechanic:major-status-effect}, attacks the
+        # target.
+        # Calculated stats are ignored; the base stats for the target
+        # and assorted attackers are used instead.
+        # The random factor in the damage formula is not used.
+        # []{type:dark} Pokémon still get [STAB]{mechanic:stab}.
+        # FIXME: event-log.
+
+        pass
+
+    elif effect == 190:
+        # Inflicts exactly enough damage to lower the target's
+        # {mechanic:hp} to equal the user's.  If the target's HP is not
+        # higher than the user's, this move has no effect.
+        # Type immunity applies, but other type effects are ignored.
+        # This effect counts as damage for moves that respond to damage.
+        return np.clip(a=f2.current.hp - f1.current.hp,
+                       a_min=0,
+                       a_max=f2.current.hp)
+
+    elif effect == 228:
+        # Targets the last opposing Pokémon to hit the user with a
+        # damaging move this turn.
+        # Inflicts 1.5× the damage that move did to the user.
+        # If there is no eligible target, this move will fail.
+        # Type immunity applies, but other type effects are ignored.
+        # FIXME: event-log.
+
+        pass
+
+    elif effect:
+
+
 def attack(f1, m1, f2):
     """f1 uses m1 to attack f2.
 
@@ -152,10 +492,15 @@ def attack(f1, m1, f2):
 
     Moves with different meta-categories have different behaviors.
     There are 14 different meta-categories according to veekun.com.
+
+    Chekcing order:
+        direct damage
+        other damage
     """
 
     # Determine if the move is hit or not.
     modifier_hit = hit_indicator(f1, m1, f2)
 
     if m1.meta_category_id in [0, 4, 6, 7, 8]:
+        # For all moves that deal damage
         pass
