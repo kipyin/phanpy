@@ -10,9 +10,8 @@ import numpy as np
 from numpy.random import binomial, uniform
 
 from core.helpers import efficacy
-from core.status import Status
-from core.item import Item
-from tables import move_natural_gift as move_ng
+from tables import move_natural_gift
+
 
 def priorities(p1, p1_move, p2, p2_move):
     """Determines the order of attack.
@@ -103,7 +102,7 @@ def hit_indicator(f1, m1, f2):
         return 1
 
     elif f2.status.semi_invulnerable:
-        # FIXME: best way to do this? This works.
+        # XXX: best way to do this? This works.
         # If the opponent is semi-invulnerable, i.e. if the opponent
         # used bounce, fly, sky-drop, dig, or dive. Unless the user's
         # move is one of specific moves, the user's move surely won't
@@ -310,7 +309,7 @@ def power(f1, m1, f2):
         # what they would be if []{move:stockpile} had not been used.
         # If the user has no energy stored, this move will
         # {mechanic:fail}.
-        # FIXME: pass
+        # XXX: pass
         pass
 
     elif effect == 197:
@@ -366,10 +365,11 @@ def power(f1, m1, f2):
         # Relevant info is stored in
         # `data/csv/custom/move_natural_gift.csv`.
 
-        move_ng = move_ng[move_ng["item_id"] == f1.item.id]
-        m1.type_id = move_ng["type_id"].values[0]
+        __cond = move_natural_gift["item_id"] == f1.item.id
+        __subset = move_natural_gift[__cond]
+        m1.type_id = __subset["type_id"].values[0]
 
-        return move_ng["power"].values[0]
+        return __subset["power"].values[0]
 
     elif effect == 234:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -391,6 +391,98 @@ def power(f1, m1, f2):
         else:
             return 0
 
+    elif effect == 236:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power is determined by the [PP]{mechanic:pp} remaining for
+        # this move, after its [PP]{mechanic:pp} cost is deducted.
+        # Ignores {mechanic:accuracy} and {mechanic:evasion} modifiers.
+        #
+        # PP remaining | Power
+        # ------------ | ----:
+        # 4 or more    |    40
+        # 3            |    50
+        # 2            |    60
+        # 1            |    80
+        # 0            |   200
+        #
+        # If this move is activated by another move, the activating
+        # move's [PP]{mechanic:pp} is used to calculate power.
+
+        pp = m1.pp - 1
+
+        if pp >= 4:
+            return 40
+
+        elif pp == 3:
+            return 50
+
+        elif pp == 2:
+            return 60
+
+        elif pp == 1:
+            return 80
+
+        else:
+            return 200
+
+    elif effect == 238:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power directly relates to the target's relative remaining
+        # [HP]{mechanic:hp}, given by
+        # `1 + 120 * current HP / max HP`,
+        # to a maximum of 121.
+
+        return np.clip(a=(1. + 120. * f1.current.hp/f1.stats.hp),
+                       a_max=121,
+                       a_min=0)
+
+    elif effect == 246:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # Power starts at 60 and is increased by 20 for every
+        # [stage]{mechanic:stage} any of the target's stats has been
+        # raised, capping at 200.  [Accuracy]{mechanic:accuracy} and
+        # [evasion]{mechanic:evasion} modifiers do not increase this
+        # move's power.
+
+        # Counting only stat increases. Need the event log
+        # XXX: event log for stat increases.
+        pass
+
+    elif effect == 292:
+        # Inflicts [regular damage]{mechanic:regular-damage}.
+        # The greater the user's weight compared to the target's,
+        # the higher power this move has, to a maximum of 120.
+        #
+        # User's weight                    | Power
+        # -------------------------------- | ----:
+        # Up to 2× the target's weight     |    40
+        # Up to 3× the target's weight     |    60
+        # Up to 4× the target's weight     |    80
+        # Up to 5× the target's weight     |   100
+        # More than 5× the target's weight |   120
+
+        r = f1.weight/f2.weight
+
+        if r <= 2:
+            return 40
+
+        elif r <= 3:
+            return 60
+
+        elif r <= 4:
+            return 80
+
+        elif r <= 5:
+            return 100
+
+        else:
+            return 120
+
+    else:
+        # All cases up to Gen.5 should be covered.
+        raise ValueError("{}'s effect is not covered!"
+                         " (effect id {})".format(m1.name, m1.effect_id))
+
 
 def direct_damage(f1, m1, f2):
     """Calculates the damage for moves deal direct damage.
@@ -410,7 +502,7 @@ def direct_damage(f1, m1, f2):
         # is [typeless]{mechanic:typeless}.
         #
         # This move cannot be selected by []{move:sleep-talk}.
-        # FIXME: event log
+        # XXX: event log
         pass
 
     elif effect == 41:
@@ -439,7 +531,7 @@ def direct_damage(f1, m1, f2):
         # Inflicts twice the damage that move did to the user.
         # If there is no eligible target, this move will fail.
         # Type immunity applies, but other type effects are ignored.
-        # FIXME; event log
+        # XXX; event log
         pass
 
     elif effect == 131:
@@ -454,7 +546,7 @@ def direct_damage(f1, m1, f2):
         # If there is no eligible target, this move will
         # [fail]{mechanic:fail}.
         # Type immunity applies, but other type effects are ignored.
-        # FIXME: event-log. Similar to effect 90.
+        # XXX: event-log. Similar to effect 90.
         pass
 
     elif effect == 155:
@@ -466,7 +558,7 @@ def direct_damage(f1, m1, f2):
         # and assorted attackers are used instead.
         # The random factor in the damage formula is not used.
         # []{type:dark} Pokémon still get [STAB]{mechanic:stab}.
-        # FIXME: event-log.
+        # XXX: event-log.
 
         pass
 
@@ -486,11 +578,29 @@ def direct_damage(f1, m1, f2):
         # Inflicts 1.5× the damage that move did to the user.
         # If there is no eligible target, this move will fail.
         # Type immunity applies, but other type effects are ignored.
-        # FIXME: event-log.
+        # XXX: event-log.
 
         pass
 
-    elif effect:
+    elif effect == 242:
+        # If the target has selected a damaging move this turn, the
+        # user will copy that move and use it against the target, with
+        # a 50% increase in power.
+        #
+        # If the target moves before the user, this move will
+        # [fail]{mechanic:fail}.
+        #
+        # This move cannot be copied by []{move:mirror-move}, nor
+        # selected by []{move:assist}, []{move:metronome}, or
+        # []{move:sleep-talk}.
+        # XXX: event-log
+
+        pass
+
+    else:
+        # All cases up to Gen.5 should be covered.
+        raise ValueError("{}'s effect is not covered!"
+                         " (effect id {})".format(m1.name, m1.effect_id))
 
 
 def attack(f1, m1, f2):
