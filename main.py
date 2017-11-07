@@ -22,8 +22,10 @@ from numpy.random import binomial, uniform
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
+from mechanisms.core.pokemon import Trainer
 
-def priorities(p1, p1_move, p2, p2_move):
+
+def order_of_attack(p1, p1_move, p2, p2_move):
     """Determines the order of attack.
 
     # TODO: need to take effects into account, e.g.
@@ -49,8 +51,18 @@ def priorities(p1, p1_move, p2, p2_move):
     return f1, f2, m1, m2
 
 
-def is_mobile(f, m):
-    """Checks if a pokemon is able to make a move in this turn or not.
+def can_select_a_move(f, m):
+    """If the Pokémon is able to **select** a move, return True.
+    """
+    if 'recharge' not in f.status:
+        # `f` cannot make a move after using a move requiring
+        # recharging.
+        return True
+
+
+
+def can_use_the_selected_move(f, m):
+    """If the Pokémon is able to **use** a selected move, return True.
 
     Not be able to move if suffer from:
         {status: freeze},
@@ -65,37 +77,30 @@ def is_mobile(f, m):
         {status: withdrawing} (need to be added).
     """
 
-    statuses = f.status.name
+    statuses = f.status
 
-    __absolutely_immobile = {'flinch', 'taking-in-sunlight', 'withdrawing'}
+    if f.order == 2 and 'flinch' in statuses:
+        # A Pokémon can only flinch if it is hit by another Pokémon's
+        # move before using its move.
+        return True
 
-    if __absolutely_immobile & set(statuses):
-        # Cases where `f` is surely immobile
+    elif 'paralysis' in statuses:
+        return bool(binomial(1., 0.25))
+
+    elif 'infatuation' in statuses:
+        return bool(binomial(1., 0.5))
+
+    elif (('sleep' in statuses) and
+          (m.name not in ['sleep-talk', 'snore'])):
+        # If the Pokémon is sleeping and not using sleep-talk or
+        # snore.
         return False
 
-    elif f.status.semi_invulnerable:
-        # If `f` is semi-invulnerable, it cannot move.
+    elif (('freeze' in statuses) and
+          ('defrost' not in m.flag.name)):
+        # If the Pokémon is frozen and not using a move with defrost
+        # flag.
         return False
-
-    else:
-        # Cases where `f` is conditionally immobile:
-        if 'paralysis' in statuses:
-            return bool(binomial(1., 0.25))
-
-        elif 'infatuation' in statuses:
-            return bool(binomial(1., 0.5))
-
-        elif (('sleep' in statuses) and
-              (m.name not in ['sleep-talk', 'snore'])):
-            # If the Pokémon is sleeping and not using sleep-talk or
-            # snore.
-            return False
-
-        elif (('freeze' in statuses) and
-              ('defrost' not in m.flag.name)):
-            # If the Pokémon is frozen and not using a move with defrost
-            # flag.
-            return False
 
     return True
 
@@ -641,3 +646,6 @@ def attack(f1, m1, f2):
     if m1.meta_category_id in [0, 4, 6, 7, 8]:
         # For all moves that deal damage
         pass
+
+satoshi = Trainer()
+print(satoshi, satoshi.id, satoshi.name, satoshi.party)

@@ -19,38 +19,44 @@ class Item():
 
     def __init__(self, which_item):
 
-        if str(which_item).isnumeric():
+        if which_item == 0:
+            __id = 0
+            __name = 'no-item'
+
+        elif str(which_item).isnumeric():
             # If which_item is a valid item id, get its name from the
             # table.
-            if which_item not in items.id.values:
+            if which_item not in items.id.values and which_item:
                 raise KeyError("Invalid item id.")
             else:
                 __subset = items[items["id"] == which_item]
-                __name = __subset["identifier"].values[0]
+                __name = __subset["identifier"].values
                 __id = which_item
 
-        else:
-            if which_item in items.identifier.values:
-                # If which_item is a valid item namem, get the item id
-                # from the table.
-                __subset = items[items["identifier"] == which_item]
-                __id = __subset["id"].values[0]
-            else:
-                # Otherwise, set the id to a random 6-digit number.
-                __id = np.random.randint(100000, 199999)
+        elif which_item in items.identifier.values:
+            # If which_item is a valid item namem, get the item id
+            # from the table.
+            __subset = items[items["identifier"] == which_item]
+            __id = __subset["id"].values[0]
             __name = which_item
 
-        __label = __id - 1
+        __label = __id
 
         self.id = __id
         self.name = __name
 
-        self.category_id = items.loc[__label, "category_id"]
-        self.fling_power = items.loc[__label, "fling_power"]
+        if self.id != 0:
+            self.category_id = items.loc[__label, "category_id"]
+            self.fling_power = items.loc[__label, "fling_power"]
 
-        __effect_id = items.loc[__label, "fling_effect_id"]
-        __subset = item_fling_effects[item_fling_effects["id"] == __effect_id]
-        __effect_name = __subset["identifier"].values
+            __effect_id = items.loc[__label, "fling_effect_id"]
+            __subset = item_fling_effects[item_fling_effects["id"] == __effect_id]
+            __effect_name = __subset["identifier"].values
+
+        else:
+            self.category_id = 23
+            self.fling_power = 0
+            __effect_id = float('nan')
 
         if np.isnan(__effect_id):
             # If there is no effect...
@@ -65,6 +71,7 @@ class Item():
         self.flag = item_flags.merge(__flag_id, how="inner",
                                      on="id")
         self.flag.columns = ["id", "name"]
+
 
     def __str__(self):
         return self.name
@@ -99,6 +106,9 @@ class Item():
         elif fling_id == 6:
             other.status += Status('poison')
 
-        else:
+        elif fling_id == 7:
             # XXX: flinch if the opponent has not gone this turn.
+            pass
+
+        else:
             pass

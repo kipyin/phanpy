@@ -7,13 +7,13 @@ Created on Sat Nov  4 15:56:47 2017
 """
 from collections import deque, defaultdict
 
-from pandas import Series
+from pandas import Series, DataFrame
 import numpy as np
 
 from mechanisms.core.item import Item
 from mechanisms.core.move import Move
 from mechanisms.core.status import Status
-import mechanisms.data.tables as tb
+from mechanisms.data import tables as tb
 
 
 # TODO: finish the doc string
@@ -57,7 +57,6 @@ class Pokemon():
 
     Properties
     ----------
-        :id                      : A unique number for each Pokémon including
 
     """
 
@@ -159,7 +158,7 @@ class Pokemon():
         # ------------------ NATURE Initialization ------------------- #
 
         # Randomly assign a nature to the Pokémon.
-        self.nature_id = np.random.random_integers(1, 25)
+        self.nature_id = np.random.random_integers(1, 24)
 
         # Set the relevant info with respect to the Pokémon's nature.
         # TODO: flavors are not needed in a battle, so I might remove
@@ -256,9 +255,9 @@ class Pokemon():
                         (tb.pokemon_moves.level < self.level + 1))
 
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
-        __default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
+        _default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
 
-        self.moves = __default_moves
+        self.moves = _default_moves
 
         # --------------------- Miscellaneous ------------------------ #
 
@@ -301,19 +300,30 @@ class Pokemon():
 class Trainer():
     """Some awesome introductions.
     """
+    global turn
 
-    def __init__(self, name, num_of_pokemon=3):
+    def __init__(self, name=None, num_of_pokemon=3):
 
         self.id = np.random.randint(0, 65535)
 
-        __party = [Pokemon(np.random.randint(1, 494))
-                   for x in np.arange(num_of_pokemon)]
+        if name:
+            self.name = name
+        else:
+            self.name = str(self.id)
+
+        __party = [Pokemon(x)
+                   for x in np.random.choice(a=np.arange(1, 494),
+                                             size=num_of_pokemon)]
 
         for pokemon in __party:
             pokemon.trainer_id = self.id
 
         self._party = __party
-        self.name = name
+
+
+        # The _events property is predefined to have 100 rows. This is
+        # a bit faster than adding rows on the fly.
+        self._events = DataFrame(index=np.arange(1, 101))  # XXX: add cols
 
         self.__counter = 0
 
@@ -322,6 +332,9 @@ class Trainer():
         return self
 
     def __next__(self):
+        """Iterating a Trainer object is the same as iterating through
+        the Pokemon objects in its party.
+        """
 
         if self.__counter >= len(self._party):
             raise StopIteration
@@ -330,7 +343,17 @@ class Trainer():
             self.__counter += 1
             return self._party[self.__counter-1]
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
     def party(self, slot=None):
+        """
+        Gets the Pokemone names in the party if no slot is selected.
+        Returns the Pokemon specified by slot if one has been chosen.
+        """
 
         if slot:
             return self._party[slot-1]
@@ -344,4 +367,9 @@ class Trainer():
 
         print("{} is added to slot {}.".format(pokemon.name, slot))
 
+    def events(self, event_name=None, value=None):
 
+        if event_name and value:
+            self._events.loc[turn, event_name] = value
+        else:
+            print(self._events)

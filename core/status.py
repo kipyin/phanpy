@@ -32,13 +32,13 @@ class Status():
 
     Usage
     -----
-        >>> clock = 1
+        >>> turn = 1
         >>> poison = Status(5)
         >>> leech_seed = Status(18,5)
         >>> combined = poison + leech_seed
         >>> combined.remaining_round
         array([ inf,   5.])
-        >>> clock += 1
+        >>> turn += 1
         >>> another_combined = Status('burn') + combined
         ...                    + Status('nightmare')
         >>> another_combined.name
@@ -72,14 +72,14 @@ class Status():
 
     def __init__(self, status, lasting_time=None):
 
-        global clock
+        global turn
 
         try:
-            # Check if `clock` is defined.
-            clock = clock
+            # Check if `turn` is defined.
+            turn = turn
 
         except NameError:
-            clock = 1
+            turn = 1
 
         if status in list(ailments.id.values):
             # If the input is a valid id, get the status name from the
@@ -108,7 +108,7 @@ class Status():
         __volatile = __status_id not in range(0, 6)
 
         # Set the starting time to the current round number.
-        __start = clock
+        __start = turn
 
         if __name in ['flying-up-high', 'undergound', 'underwater',
                       'semi-invulnerable']:
@@ -158,7 +158,7 @@ class Status():
     @staticmethod
     def current_round():
         """Returns the current round num"""
-        return clock
+        return turn
 
     @property
     def remaining_round(self):
@@ -194,18 +194,24 @@ class Status():
         return len(self.name)
 
     def __iter__(self):
-        # Make Status iterable. I don't know where it can be used, but
-        # why not.
+        """Make Status iterable.
+
+        Usage
+        -----
+            >>> 'flinch' in Pokemon(123).status
+            False
+
+        """
         return self
 
     def __next__(self):
 
-        if self.__current >= len(self.id):
+        if self.__current >= len(self.name):
             raise StopIteration
 
         else:
             self.__current += 1
-            return list(self.id)[self.__current - 1]
+            return list(self.name)[self.__current - 1]
 
     def __add__(self, other):
         """Adds two statuses together.
@@ -262,15 +268,15 @@ class Status():
 
 def test():
 
-    global clock
+    global turn
 
     poison = Status(5)
     leech_seed = Status(18, 5)
     combined = leech_seed + poison
-    clock += 1
+    turn += 1
     burn = Status(4)
     combined += burn
-    clock += 1
+    turn += 1
     nightmare = Status(9, 5)
     new_combined = poison + nightmare + combined
 
