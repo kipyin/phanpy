@@ -22,6 +22,7 @@ from numpy.random import binomial, uniform
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
+# XXX: consider merging all classes to one file.
 from mechanisms.core.pokemon import Trainer, Pokemon
 from mechanisms.core.move import Move
 
@@ -29,27 +30,35 @@ from mechanisms.core.move import Move
 def order_of_attack(p1, p1_move, p2, p2_move):
     """Determines the order of attack.
 
-    # TODO: need to take effects into account, e.g.
+    # XXX: need to take effects into account, e.g.
     trick-room, quick-claw.
     """
 
     if p1_move.priority > p2_move.priority:
         # If the moves' priorities are different, use the moves'
         # prioirties.
+
+        p1.order, p2.order = 1, 2
         f1, f2, m1, m2 = p1, p2, p1_move, p2_move
 
     elif p1_move.priority < p2_move.priority:
+
+        p1.order, p2.order = 2, 1
         f1, f2, m1, m2 = p2, p1, p2_move, p1_move
 
     else:
         # If the moves' priorities are the same, determine the
         # priorities based on the Pokémons' speeds.
         if p1.current.speed >= p2.current.speed:
+
+            p1.order, p2.order = 1, 2
             f1, f2, m1, m2 = p1, p2, p1_move, p2_move
         else:
+
+            p1.order, p2.order = 2, 1
             f1, f2, m1, m2 = p2, p1, p2_move, p1_move
 
-    return f1, f2, m1, m2
+    return f1, m1, f2, m2
 
 
 def can_select_a_move(f, m):
@@ -61,6 +70,7 @@ def can_select_a_move(f, m):
         return False
     else:
         return True
+
 
 def can_use_the_selected_move(f, m):
     """If the Pokémon is able to **use** a selected move, return True.
@@ -154,7 +164,7 @@ def hit_indicator(f1, m1, f2):
     if np.isnan(m1.accuracy):
         # I haven't found any cases where the accuracy is nan and still
         # has a chance to miss.
-        # TODO: an exhaustive check on this.
+        # XXX: an exhaustive check on this.
         return 1
 
     else:
@@ -168,7 +178,7 @@ def hit_indicator(f1, m1, f2):
 def critical_indicator(f1, m1, f2):
     """Returns 2 if a hit is critical else 1 (Gen.II ~ Gen.V).
 
-    # TODO: moves exempt from critical hit calculation?
+    # XXX: moves exempt from critical hit calculation?
     """
     pass
 
@@ -176,6 +186,8 @@ def critical_indicator(f1, m1, f2):
 def regular_damage(f1, m1, f2):
     """Retuns the damage for all moves deals regular damage.
     """
+    global turn
+
     effect = m1.effect_id
 
     if effect == 100:
@@ -363,8 +375,8 @@ def regular_damage(f1, m1, f2):
         # `1 + 25 * target Speed / user Speed`, capped at 150.
 
         power = np.clip(a=(1 + 25. * f2.current.speed/f1.current.speed),
-                         a_max=150,
-                         a_min=0)
+                        a_max=150,
+                        a_min=0)
 
     elif effect == 223:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -464,8 +476,7 @@ def regular_damage(f1, m1, f2):
         # [evasion]{mechanic:evasion} modifiers do not increase this
         # move's power.
 
-        # Counting only stat increases. Need the event log
-        # XXX: event log for stat increases.
+        # Counting **only** stat increases.
 
         stats_in_interest = ['attack', 'defense', 'specialAttack',
                              'specialDefense', 'speed']
@@ -580,7 +591,7 @@ def direct_damage(f1, m1, f2):
 
     elif effect == 131:
         # Inflicts exactly 20 damage.
-        # TODO: type-immunity?
+        # XXX: type-immunity?
         return 20
 
     elif effect == 145:
