@@ -269,6 +269,13 @@ class Pokemon():
         # Should items have their own class? Probably not?
         self.item = Item(0)
 
+        self.trainer_id = np.random.randint(0, 65535)
+
+        # 1 if this pokemon moves first, 2 if it moves second, and so on.
+        # 0 if this pokemon is not in a battle.
+
+        self.order = 0
+
         # -------------------------- END ----------------------------- #
 
     def __str__(self):
@@ -289,3 +296,52 @@ class Pokemon():
                             data=[0 for x in range(9)])
 
         # self.status = Status(0)
+
+
+class Trainer():
+    """Some awesome introductions.
+    """
+
+    def __init__(self, name, num_of_pokemon=3):
+
+        self.id = np.random.randint(0, 65535)
+
+        __party = [Pokemon(np.random.randint(1, 494))
+                   for x in np.arange(num_of_pokemon)]
+
+        for pokemon in __party:
+            pokemon.trainer_id = self.id
+
+        self._party = __party
+        self.name = name
+
+        self.__counter = 0
+
+    def __iter__(self):
+
+        return self
+
+    def __next__(self):
+
+        if self.__counter >= len(self._party):
+            raise StopIteration
+
+        else:
+            self.__counter += 1
+            return self._party[self.__counter-1]
+
+    def party(self, slot=None):
+
+        if slot:
+            return self._party[slot-1]
+        else:
+            return self._party
+
+    def set_pokemon(self, slot, pokemon):
+
+        pokemon.trainer_id = self.id
+        self._party[slot-1] = pokemon
+
+        print("{} is added to slot {}.".format(pokemon.name, slot))
+
+
