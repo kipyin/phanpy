@@ -16,8 +16,7 @@ from mechanisms.core.status import Status
 from mechanisms.data import tables as tb
 
 
-# TODO: finish the doc string
-# FIXME: make the doc string PEP8-friendly
+# XXX: finish the doc string
 class Pokemon():
     """A well-defined object capturing all relevant information about a
     pokémon regarding to battle simulation. Does not take abilities
@@ -31,9 +30,9 @@ class Pokemon():
         >>> foo.stats
         hp                 62.0
         attack            127.0
-        defence           105.0
+        defense           105.0
         specialAttack     165.0
-        specialDefence    110.0
+        specialDefense    110.0
         speed             135.0
         dtype: float64
         >>> foo.iv.specialAttack
@@ -60,11 +59,11 @@ class Pokemon():
 
     """
 
-    STAT_NAMES = ['hp', 'attack', 'defence',
-                  'specialAttack', 'specialDefence', 'speed']
+    STAT_NAMES = ['hp', 'attack', 'defense',
+                  'specialAttack', 'specialDefense', 'speed']
 
-    CURRENT_STAT_NAMES = ['hp', 'attack', 'defence', 'specialAttack',
-                          'specialDefence', 'speed', 'accuracy', 'evasion']
+    CURRENT_STAT_NAMES = ['hp', 'attack', 'defense', 'specialAttack',
+                          'specialDefense', 'speed', 'accuracy', 'evasion']
 
     def __init__(self, which_pokemon, level=50):
         # XXX: the try-except clause does nothing..?
@@ -146,7 +145,7 @@ class Pokemon():
         # Pokémon's individual values are randomly generated.
         # Each value is uniformly distributed between 1 and 31.
         self.iv = Series(
-                    data=[np.random.random_integers(1, 32) for i in range(6)],
+                    data=[np.random.randint(1, 32) for i in range(6)],
                     index=self.STAT_NAMES
                         )
 
@@ -268,7 +267,7 @@ class Pokemon():
         # Should items have their own class? Probably not?
         self.item = Item(0)
 
-        self.trainer_id = np.random.randint(0, 65535)
+        self.trainer = None
 
         # 1 if this pokemon moves first, 2 if it moves second, and so on.
         # 0 if this pokemon is not in a battle.
@@ -315,30 +314,45 @@ class Trainer():
                                                         size=num_of_pokemon)]
 
         for pokemon in __party:
-            pokemon.trainer_id = self.id
+            pokemon.trainer = self
 
         self._party = __party
 
-        event_names = [
-                       'order',
-                       'move_id', 'item_id', 'switch_to_id',
-                       'damage_to_opponent', 'damage_to_self',
-                       'status_to_opponent', 'status_to_self',
-                       'attack_to_opponent', 'attack_to_self',
-                       'defence_to_opponent', 'defence_to_self',
-                       'specialAttack_to_opponent', 'specialAttack_to_self',
-                       'specialDefence_to_opponent', 'specialDefence_to_self',
-                       'speed_to_opponent', 'speed_to_self',
-                       'accuracy_to_opponent', 'accuracy_to_self',
-                       'evasion_to_opponent', 'evasion_to_self',
-                       'critical_to_opponent', 'critical_to_self'
-                       ]
+        # `event` property is a multi-indexed DataFrame, with 50
+        # predefined rows filled with 0's.
+        statnames = ['attack', 'defense', 'specialAttack', 'specialDefense',
+                     'speed', 'critical', 'accuracy', 'evasion']
 
-        # The _events property is predefined to have 100 rows. This is
-        # a bit faster than adding rows on the fly.
-        self._events = DataFrame(index=np.arange(1, 101),
-                                 columns=event_names,
-                                 data=np.zeros((100, len(event_names))))
+        # This dictionary will define the indices and values of `events`.
+        multiIndexDict = defaultdict(dict)
+
+        # 50 predefined rows, all have 0. in values.
+        # This is a single column in `events`.
+        __value_dict = {k: 0. for k in np.arange(1, 51)}
+
+        # Append 'columns' to the dictionary.
+        for part in ['self', 'opponent']:
+            for name in statnames:
+
+                multiIndexDict[(part, 'stats', name)] = __value_dict
+
+            multiIndexDict[(part, 'ailment')] = __value_dict
+
+        # Create a dataframe from the dictionary.
+        __events = DataFrame(multiIndexDict)
+
+        # Add three top-level columns.
+        __zeros = np.zeros((50, 1))
+        for top in ['order', 'move', 'item']:
+            __events[top] = __zeros
+
+        # Set the index name.
+        __events.index.names('turn')
+
+        # ... and finally
+        # No longer making `events` a protected property, due to its
+        # complex level structure.
+        self.events = __events
 
         self.__counter = 0  # a counter for `__next__`
 
@@ -349,6 +363,11 @@ class Trainer():
     def __next__(self):
         """Iterating a Trainer object is the same as iterating through
         the Pokemon objects in its party.
+
+        >>> satoshi = Trainer('Satoshi')
+        >>> for pokemon in satoshi:
+        ...    # do something
+
         """
 
         if self.__counter >= len(self._party):
@@ -382,9 +401,4 @@ class Trainer():
 
         print("{} is added to slot {}.".format(pokemon.name, slot))
 
-    def events(self, event_name=None, value=None):
 
-        if event_name and value:
-            self._events.loc[turn, event_name] = value
-        else:
-            return self._events

@@ -1,7 +1,7 @@
 """An unmaintained one-shot script for setting event names.
 """
 
-stats = ['attack', 'defence', 'specialAttack', 'specialDefence',
+stats = ['attack', 'defense', 'specialAttack', 'specialDefense',
          'speed', 'accuracy', 'evasion', 'critical']
 
 res = []

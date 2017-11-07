@@ -22,7 +22,8 @@ from numpy.random import binomial, uniform
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
-from mechanisms.core.pokemon import Trainer
+from mechanisms.core.pokemon import Trainer, Pokemon
+from mechanisms.core.move import Move
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -54,12 +55,12 @@ def order_of_attack(p1, p1_move, p2, p2_move):
 def can_select_a_move(f, m):
     """If the Pokémon is able to **select** a move, return True.
     """
-    if 'recharge' not in f.status:
+    if 'recharge' in f.status:
         # `f` cannot make a move after using a move requiring
         # recharging.
+        return False
+    else:
         return True
-
-
 
 def can_use_the_selected_move(f, m):
     """If the Pokémon is able to **use** a selected move, return True.
@@ -108,7 +109,7 @@ def can_use_the_selected_move(f, m):
 def hit_indicator(f1, m1, f2):
     """Returns 1 if a move is hit else 0."""
 
-    if 'taking-aim' in f2.status.name:
+    if 'taking-aim' in f2.status:
         # If the target has been aimed at in the previous turn, the
         # attacker's move will not miss. 'taking-aim' should be have a
         # life time of 1.
@@ -160,7 +161,7 @@ def hit_indicator(f1, m1, f2):
         # If the move's accuracy is not nan, use the regular hit rate
         # formula P = move's accuracy * user's accuracy / opponent's
         # evasion.
-        p = m1.accuracy/100. * f1.stage_facotr.accuracy/f2.stage_factor.evasion
+        p = m1.accuracy/100. * f1.stage_factor.accuracy/f2.stage_factor.evasion
         return binomial(1., p)
 
 
@@ -172,8 +173,8 @@ def critical_indicator(f1, m1, f2):
     pass
 
 
-def power(f1, m1, f2):
-    """Retuns the power for all damaging moves.
+def regular_damage(f1, m1, f2):
+    """Retuns the damage for all moves deals regular damage.
     """
     effect = m1.effect_id
 
@@ -197,22 +198,22 @@ def power(f1, m1, f2):
         q = f1.current.hp / f1.stats.hp
 
         if q < 0.0417:
-            return 200
+            power = 200
 
         elif q < 0.1042:
-            return 150
+            power = 150
 
         elif q < 0.2083:
-            return 100
+            power = 100
 
         elif q < 0.3542:
-            return 80
+            power = 80
 
         elif q < 0.6875:
-            return 40
+            power = 40
 
         else:
-            return 20
+            power = 20
 
     elif effect == 122:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -220,9 +221,9 @@ def power(f1, m1, f2):
         # given by `happiness * 2 / 5`, to a maximum of 102.
         # Power bottoms out at 1.
 
-        return np.clip(a=f1.happiness * 2./5.,
-                       a_max=102,
-                       a_min=1)
+        power = np.clip(a=f1.happiness * 2./5.,
+                        a_max=102,
+                        a_min=1)
 
     elif effect == 123:
         # Randomly uses one of the following effects.
@@ -233,35 +234,20 @@ def power(f1, m1, f2):
         # Inflicts {mechanic:regular-damage} with 80 power   |    30%
         # Inflicts {mechanic:regular-damage} with 120 power  |    10%
         # Heals the target for 1/4 its max {mechanic:hp}     |    20%
-        #
-        # On average, this move inflicts {mechanic:regular-damage}
-        # with 52 power and heals the target for 1/20 its max
-        # {mechanic:hp}.
 
-        # Using the Bayesian rule to calculate the probabilities.
-        # Inflicts damage 80% of the time, and heals the target 20% of
-        # the time.
+        q = uniform(0, 1)
 
-        inflict_damage = binomial(1, .8)
+        if q < .1:
+            power = 120
 
-        if inflict_damage:
-            # Given the move inflicts damage, there are .4/.8 chance to
-            # have 40 power, .3/.8 chance to have 80 power, and .1/.8
-            # chance to have 120 power.
+        elif q < .4:
+            power = 80
 
-            q = uniform(0, 1)
-
-            if q < .125:
-                return 120
-
-            elif q < .5:
-                return 80
-
-            else:
-                return 40
+        elif q < .8:
+            power = 40
 
         else:
-            return -.25 * f2.stats.hp
+            power = -.25 * f2.stats.hp
 
     elif effect == 124:
         # Inflicts {mechanic:regular-damage}.
@@ -269,9 +255,9 @@ def power(f1, m1, f2):
         # `(255 - happiness) * 2 / 5`, to a maximum of 102.
         # Power bottoms out at 1.
 
-        return np.clip(a=(255-f1.happiness) * 2./5.,
-                       a_max=102,
-                       a_min=1)
+        power = np.clip(a=(255-f1.happiness) * 2./5.,
+                        a_max=102,
+                        a_min=1)
 
     elif effect == 127:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -294,38 +280,47 @@ def power(f1, m1, f2):
         q = uniform(0, 1)
 
         if q < .05:
-            return 10
+            power = 10
 
         elif q < .15:
-            return 30
+            power = 30
 
         elif q < .35:
-            return 50
+            power = 50
 
         elif q < .65:
-            return 70
+            power = 70
 
         elif q < .85:
-            return 90
+            power = 90
 
         elif q < .95:
-            return 110
+            power = 110
 
         else:
-            return 150
+            power = 150
 
     elif effect == 162:
         # Inflicts [regular damage]{mechanic:regular-damage}.
         # Power is equal to 100 times the amount of energy stored by
         # []{move:stockpile}.
-        # Ignores the random factor in the damage formula.
+        # XXX: Ignores the random factor in the damage formula.
         # Stored energy is consumed, and the user's {mechanic:defense}
         # and [Special Defense]{mechanic:special-defense} are reset to
         # what they would be if []{move:stockpile} had not been used.
         # If the user has no energy stored, this move will
         # {mechanic:fail}.
         # XXX: pass
-        pass
+
+        if 'stockpile' in f1.flags.keys():
+            energy = f1.flags.pop('stockpile')
+            power = energy * 100.
+            f1.current.defense = f1.flags.pop('defense_at_stockpile')
+            f1.current.specialDefense = f1.flags.pop('specialDefense_'
+                                                     'at_stockpile')
+
+        else:
+            power = 0
 
     elif effect == 197:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -344,22 +339,22 @@ def power(f1, m1, f2):
         w = f2.weight
 
         if w <= 10:
-            return 20
+            power = 20
 
         elif w <= 25:
-            return 40
+            power = 40
 
         elif w <= 50:
-            return 60
+            power = 60
 
         elif w <= 100:
-            return 80
+            power = 80
 
         elif w <= 200:
-            return 100
+            power = 100
 
         else:
-            return 120
+            power = 120
 
     elif effect == 220:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -367,9 +362,9 @@ def power(f1, m1, f2):
         # compared to the user, given by
         # `1 + 25 * target Speed / user Speed`, capped at 150.
 
-        return np.clip(a=(1 + 25. * f2.current.speed/f1.current.speed),
-                       a_max=150,
-                       a_min=0)
+        power = np.clip(a=(1 + 25. * f2.current.speed/f1.current.speed),
+                         a_max=150,
+                         a_min=0)
 
     elif effect == 223:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -377,14 +372,20 @@ def power(f1, m1, f2):
         # The berry is consumed.  If the user is not holding a berry,
         # this move will [fail]{mechanic:fail}.
 
-        # Relevant info is stored in
+        # The relevant info is stored in
         # `data/csv/custom/move_natural_gift.csv`.
 
         __cond = move_natural_gift["item_id"] == f1.item.id
-        __subset = move_natural_gift[__cond]
-        m1.type_id = __subset["type_id"].values[0]
 
-        return __subset["power"].values[0]
+        if __cond.any():
+            # If there is at least one match
+            __subset = move_natural_gift[__cond]
+            m1.type_id = __subset["type_id"].values[0]
+
+            power = __subset["power"].values[0]
+
+        else:
+            pwoer = 0
 
     elif effect == 234:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -399,12 +400,16 @@ def power(f1, m1, f2):
         # this move will [fail]{mechanic:fail}.
 
         if 'embargo' not in f1.status:
+
             f1.item.fling(f2)
+            # Item().fling(target) activates the fling_effect to
+            # the given `target`.
+            # XXX: this method is incomplete. See item.py
 
             if f1.item.fling_power:
-                return f1.item.fling_power
+                power = f1.item.fling_power
         else:
-            return 0
+            power = 0
 
     elif effect == 236:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -420,25 +425,25 @@ def power(f1, m1, f2):
         # 1            |    80
         # 0            |   200
         #
-        # If this move is activated by another move, the activating
+        # XXX: if this move is activated by another move, the activating
         # move's [PP]{mechanic:pp} is used to calculate power.
 
         pp = m1.pp - 1
 
         if pp >= 4:
-            return 40
+            power = 40
 
         elif pp == 3:
-            return 50
+            power = 50
 
         elif pp == 2:
-            return 60
+            power = 60
 
         elif pp == 1:
-            return 80
+            power = 80
 
         else:
-            return 200
+            power = 200
 
     elif effect == 238:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -447,9 +452,9 @@ def power(f1, m1, f2):
         # `1 + 120 * current HP / max HP`,
         # to a maximum of 121.
 
-        return np.clip(a=(1. + 120. * f1.current.hp/f1.stats.hp),
-                       a_max=121,
-                       a_min=0)
+        power = np.clip(a=(1. + 120. * f1.current.hp/f1.stats.hp),
+                        a_max=121,
+                        a_min=0)
 
     elif effect == 246:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -461,7 +466,22 @@ def power(f1, m1, f2):
 
         # Counting only stat increases. Need the event log
         # XXX: event log for stat increases.
-        pass
+
+        stats_in_interest = ['attack', 'defense', 'specialAttack',
+                             'specialDefense', 'speed']
+
+        __e_s = f1.trainer.events.opponent.stats.loc[:turn, stats_in_interest]
+        __e_s = __e_s[__e_s > 0]
+
+        __e_o = f2.trainer.events.self.stats.loc[:turn, stats_in_interest]
+        __e_o = __e_o[__e_o > 0]
+
+        total_increase = (__e_s.sum().sum()
+                          + __e_o.sum().sum())
+
+        power = np.clip(a=total_increase * 20 + 60,
+                        a_max=200,
+                        a_min=0)
 
     elif effect == 292:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -479,24 +499,33 @@ def power(f1, m1, f2):
         r = f1.weight/f2.weight
 
         if r <= 2:
-            return 40
+            power = 40
 
         elif r <= 3:
-            return 60
+            power = 60
 
         elif r <= 4:
-            return 80
+            power = 80
 
         elif r <= 5:
-            return 100
+            power = 100
 
         else:
-            return 120
+            power = 120
 
     else:
         # All cases up to Gen.5 should be covered.
-        raise ValueError("{}'s effect is not covered!"
-                         " (effect id {})".format(m1.name, m1.effect_id))
+        power = m1.power
+
+    # damage = (calculations)
+
+
+def deals_direct_damage(m1):
+    """An indicator function returns True if `m1` deals direct damage.
+    """
+    # list_of_moves_with_dd = (some_kind_of_list)
+    # return m1 in list_of_moves_with_dd
+    return True
 
 
 def direct_damage(f1, m1, f2):
@@ -616,7 +645,7 @@ def direct_damage(f1, m1, f2):
         # Inflicts damage equal to the user's remaining
         # [HP]{mechanic:hp}.  User faints.
 
-        damage = f1.current.hp
+        power = f1.current.hp
         f1.current.hp = 0
 
         return damage
@@ -645,4 +674,26 @@ def attack(f1, m1, f2):
 
     if m1.meta_category_id in [0, 4, 6, 7, 8]:
         # For all moves that deal damage
-        pass
+        #
+        # if (the hit deals direct damage):
+        #   damage = direct_damage(f1, m1, f2)
+        # else:
+        #   m1.power = power(f1, m1, f2)
+        #   damage = (regular_damage_calculation)
+
+
+def test():
+    red = Trainer('Red')
+    green = Trainer('Green')
+
+    p1 = red.party(np.random.choice([1, 2, 3]))
+    p2 = green.party(np.random.choice([1, 2, 3]))
+
+    m1 = p1.moves[np.random.choice(np.arange(1, 5))]
+    m2 = p2.moves[np.random.choice(np.arange(1, 5))]
+
+    print(order_of_attack(p1, m1, p2, m2))
+    print(can_use_the_selected_move(p1, m1))
+    print(can_select_a_move(p2, m2))
+
+test()
