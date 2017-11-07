@@ -58,38 +58,6 @@ class Pokemon():
     Properties
     ----------
         :id                      : A unique number for each Pokémon including
-                                   all the forms and variations.
-        :identifier              : Alias name; the species name of the Pokémon.
-        :species_id              : The Pokédex id of the Pokémon.
-        :weight                  : Needed for some damage calculations.
-        :base_experience         : Used for calculating experience gain in
-                                   battle.
-        :order                   : ???
-        :is_default              : ???
-        :generation_id           : See `which_version` function.
-        :evolves_from_species_id : Needed for determining evolutions.
-        :evolution_chain_id      : A unique id for each evolution family.
-        :capture_rate            : Might not be needed.
-        :base_happiness          : The default happiness level of a newly-met
-                                   Pokémon. Needed for some evolution
-                                   determinations.
-        :growth_rate_id          : Determines the experience-gaining speed,
-                                   hence the growth rate.
-        :name                    : An alias for property `identifier`.
-        :gender                  : WIP. ``{1: 'male', 2: 'female',
-                                           3: 'genderless'}``.
-        :happiness               : The current level of happiness.
-        :types                   : A `list` of type_id (`int`) of all the
-                                   types of the Pokémon.
-        :base                    : A `pandas` `Series` with all 6 base stats.
-                                   Can directly call each stat by using
-                                   `Pokemon(x).base.{:stat_name:}`.
-        :iv                      : A `pandas` Series` with randomly generated
-                                   individual values for all stats. Can
-                                   directly call each stat by using
-                                   `Pokemon(x).iv.{:stat_name:}`.
-        :effort                  : The effort value will be GAINED upon
-                                   defeating such a Pokémon.
 
     """
 
@@ -126,28 +94,16 @@ class Pokemon():
         self.id = tb.pokemon.loc[LABEL, "id"]
         self.identifier = tb.pokemon.loc[LABEL, "identifier"]
         self.species_id = tb.pokemon.loc[LABEL, "species_id"]
-        self.height = tb.pokemon.loc[LABEL, "height"]
-        self.weight = tb.pokemon.loc[LABEL, "weight"]
-        self.base_experience = tb.pokemon.loc[LABEL, "base_experience"]
-        self.order = tb.pokemon.loc[LABEL, "order"]
-        self.is_default = tb.pokemon.loc[LABEL, "is_default"]
 
         # -------- Initialization from `pokemon_species.csv` --------- #
 
         p_species = tb.pokemon_species
 
         self.generation_id = p_species.loc[LABEL, "generation_id"]
-        self.evolves_from = p_species.loc[LABEL, "evolves_from_species_id"]
-        self.evolution_chain_id = p_species.loc[LABEL, "evolution_chain_id"]
-        self.color_id = p_species.loc[LABEL, "color_id"]
-        self.shape_id = p_species.loc[LABEL, "shape_id"]
         self.gender_rate = p_species.loc[LABEL, "gender_rate"]
-        self.capture_rate = p_species.loc[LABEL, "capture_rate"]
         self.base_happiness = p_species.loc[LABEL, "base_happiness"]
-        self.is_baby = p_species.loc[LABEL, "is_baby"]
         self.gender_differences = p_species.loc[LABEL, "has_"
                                                 "gender_differences"]
-        self.growth_rate_id = p_species.loc[LABEL, "growth_rate_id"]
         self.forms_switchable = p_species.loc[LABEL, "forms_switchable"]
 
         self.name = self.identifier
@@ -180,13 +136,6 @@ class Pokemon():
         if self.level not in range(1, 101):
             raise ValueError("Level should be in range(1,101).")
 
-        # Set the current experience given its level and growth rate.
-        # Not needed in battle, so I might remove this.
-        __condition = ((tb.experience["growth_rate_id"] ==
-                        self.growth_rate_id)
-                       & (tb.experience["level"] == self.level))
-        self.exp = tb.experience[__condition]["experience"]
-
         # ----------- BASE STAT, IV, & EV Initialization ------------- #
 
         # Set the Pokémon's base stats.
@@ -201,16 +150,6 @@ class Pokemon():
                     data=[np.random.random_integers(1, 31) for i in range(6)],
                     index=self.STAT_NAMES
                         )
-
-        # Set the Pokémon's base effort value.
-        # This is the amount the opponent would get upon defeating this
-        # Pokémon.
-        # Not needed in battle, but some holding items affect it.
-        # TODO: Either remove these codes or modify the held-items
-        # calculations.
-        __cond = tb.pokemon_stats["pokemon_id"] == self.id
-        self.effort = Series(data=list(tb.pokemon_stats[__cond]["effort"]),
-                             index=self.STAT_NAMES)
 
         # Set the actual EV the Pokémon has. Defaults to 0.
         # Needed for stats calculation.
@@ -308,13 +247,13 @@ class Pokemon():
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
 
+        # ------------------ Moves Initialization -------------------- #
+
         # A Pokemon defaults to learn the last 4 learnable moves at its
         # current level.
         ___condition = ((tb.pokemon_moves["pokemon_id"] == self.id) &
                         (tb.pokemon_moves["pokemon_move_method_id"] == 1) &
                         (tb.pokemon_moves.level < self.level + 1))
-
-        # ------------------ Moves Initialization -------------------- #
 
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
         __default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
