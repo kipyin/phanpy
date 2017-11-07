@@ -7,8 +7,8 @@ Created on Sat Nov  4 16:08:21 2017
 """
 import numpy as np
 
-from mechanisms.tables import (moves, move_meta,
-                               move_meta_stat_changes, move_flag_map)
+from mechanisms.data.tables import (moves, move_meta,
+                                    move_meta_stat_changes, move_flag_map)
 
 
 class Move():

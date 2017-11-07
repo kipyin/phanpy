@@ -13,7 +13,7 @@ import numpy as np
 from mechanisms.core.item import Item
 from mechanisms.core.move import Move
 from mechanisms.core.status import Status
-import mechanisms.tables as tb
+import mechanisms.data.tables as tb
 
 
 # TODO: finish the doc string

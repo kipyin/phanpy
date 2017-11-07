@@ -7,10 +7,10 @@ Created on Sat Nov  4 17:20:44 2017
 """
 from pandas import read_csv
 
-from mechanisms.config import VERSION_GROUP_ID, REGION_ID, data_path
+from mechanisms.config import VERSION_GROUP_ID, REGION_ID, DATA_PATH
 
 
-path = data_path
+path = DATA_PATH
 
 # FIXME: make these tables generation-friendly.
 
@@ -76,7 +76,7 @@ with open(path + 'types.csv') as csv_file:
     types = read_csv(csv_file)
 
 
-custom_path = data_path + 'custom/'
+custom_path = DATA_PATH + 'custom/'
 
 with open(custom_path + 'move_flag_map.csv') as csv_file:
     move_flag_map = read_csv(csv_file)

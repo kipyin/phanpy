@@ -6,7 +6,7 @@ Created on Sat Nov  4 04:22:57 2017
 
 import numpy as np
 
-from mechanisms.tables import ailments
+from mechanisms.data.tables import ailments
 
 
 # TODO: finish the __doc__ string.

@@ -5,27 +5,21 @@ Created on Sat Nov  4 17:33:44 2017
 
 @author: Kip
 """
-from collections import namedtuple
 from functools import reduce
 
 from pandas import read_csv
 
-from mechanisms.config import data_path
+from mechanisms.config import DATA_PATH, REGION_ID
 
-path = data_path
-
-
-with open(path + 'version_group_regions.csv') as csv_file:
-    version_group_regions = read_csv(csv_file)
-
-with open(path + 'versions.csv') as csv_file:
-    versions = read_csv(csv_file)
+path = DATA_PATH
 
 with open(path + 'type_efficacy.csv') as csv_file:
     type_efficacy = read_csv(csv_file)
 
-type_efficacy = type_efficacy['damage_factor'
-                              ''].values.reshape(18, 18)[:-1, :-1]/100.
+if REGION_ID <= 5:
+    # `fairy` type is added from Gen.6 onward.
+    type_efficacy = type_efficacy['damage_factor'
+                                  ''].values.reshape(18, 18)[:-1, :-1]/100.
 
 
 def efficacy(atk_type, tar_types):
@@ -63,107 +57,3 @@ def efficacy(atk_type, tar_types):
     __efficacies = map(lambda x: type_efficacy[atk_type-1, x-1], tar_types)
 
     return reduce(lambda x, y: x * y, __efficacies)
-
-
-def which_version(identifier=None,
-                  VERSION_GROUP_ID=None,
-                  REGION_ID=None,
-                  VERSION_ID=None):
-    """Returns a tuple (VERSION_GROUP_ID, REGION_ID, VERSION_ID)
-
-    Usage
-    -----
-        >>> VERSION_GROUP_ID, REGION_ID, VERSION_ID =
-        ...     which_version('firered')
-        >>> print(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
-        (7, 1, 10)
-
-    Parameters
-    ----------
-        identifier : str
-            The official name of a game; should be in the following
-            list:
-            red, blue, yellow, gold, silver, crystal,
-            ruby, sapphire, emerald, firered, leafgreen,
-            diamond, pearl, platinum, heartgold, soulsilver,
-            black, white, black-2, white-2,
-            x, y, omega-ruby, alpha-sapphire, sun, moon,
-
-    """
-    __vgr = version_group_regions
-
-    if identifier:
-        try:
-
-            __filter = versions["identifier"] == identifier
-            VERSION_GROUP_ID = int(versions[__filter]["version_group_id"])
-
-            __filter = versions["identifier"] == identifier
-            VERSION_ID = int(versions[__filter]["id"])
-
-            __filter = __vgr["version_group_id"] == int(VERSION_GROUP_ID)
-            REGION_ID = int(__vgr[__filter]["region_id"])
-
-        except Exception:
-
-            raise ValueError(
-                        "The game name should be one of the following"
-                        " list:\nred, blue, yellow, gold, silver, "
-                        "crystal,\nruby, sapphire, emerald, firered, "
-                        "leafgreen,\ndiamond, pearl, platinum, "
-                        "heartgold, soulsilver,\nblack, white, "
-                        "black-2, white-2,\nx, y, omega-ruby, "
-                        "alpha-sapphire, sun, moon."
-                            )
-
-    elif VERSION_GROUP_ID:
-        try:
-
-            __filter = __vgr["version_group_id"] == int(VERSION_GROUP_ID)
-            REGION_ID = int(__vgr[__filter]["region_id"])
-
-            __filter = versions["version_group_id"] == VERSION_GROUP_ID
-            VERSION_ID = int(versions[__filter]["id"])
-
-        except Exception:
-
-            raise ValueError("Incorrect version group id.")
-
-    elif REGION_ID:
-        try:
-
-            __filter = __vgr["region_id"] == int(REGION_ID)
-            VERSION_GROUP_ID = int(__vgr[__filter]["version_group_id"])
-
-            __filter = versions["version_group_id"] == VERSION_GROUP_ID
-            VERSION_ID = int(versions[__filter]["id"])
-
-        except Exception:
-
-            raise ValueError("Incorrect region id.")
-
-    elif VERSION_ID:
-        try:
-
-            __filter = versions["id"] == VERSION_ID
-            VERSION_GROUP_ID = int(versions[__filter]["version_group_id"])
-
-            __filter = __vgr["version_group_id"] == VERSION_GROUP_ID
-            REGION_ID = __vgr[__filter]["region_id"]
-
-        except Exception:
-
-            raise ValueError("Incorrect version id.")
-
-    else:
-        pass
-
-    VersionInfo = namedtuple('VesionInfo', ['VERSION_GROUP_ID',
-                                            'REGION_ID',
-                                            'VERSION_ID'])
-    try:
-        return VersionInfo(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
-
-    except Exception:
-
-        raise ValueError("There should be at least one argument.")

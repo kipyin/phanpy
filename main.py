@@ -20,7 +20,7 @@ import numpy as np
 from numpy.random import binomial, uniform
 
 from mechanisms.core.helpers import efficacy
-from mechanisms.tables import move_natural_gift
+from mechanisms.data.tables import move_natural_gift
 
 
 def priorities(p1, p1_move, p2, p2_move):
