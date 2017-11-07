@@ -146,7 +146,7 @@ class Pokemon():
         # Pokémon's individual values are randomly generated.
         # Each value is uniformly distributed between 1 and 31.
         self.iv = Series(
-                    data=[np.random.random_integers(1, 31) for i in range(6)],
+                    data=[np.random.random_integers(1, 32) for i in range(6)],
                     index=self.STAT_NAMES
                         )
 
@@ -158,7 +158,7 @@ class Pokemon():
         # ------------------ NATURE Initialization ------------------- #
 
         # Randomly assign a nature to the Pokémon.
-        self.nature_id = np.random.random_integers(1, 24)
+        self.nature_id = np.random.randint(1, 25)
 
         # Set the relevant info with respect to the Pokémon's nature.
         # TODO: flavors are not needed in a battle, so I might remove
@@ -311,21 +311,36 @@ class Trainer():
         else:
             self.name = str(self.id)
 
-        __party = [Pokemon(x)
-                   for x in np.random.choice(a=np.arange(1, 494),
-                                             size=num_of_pokemon)]
+        __party = [Pokemon(x) for x in np.random.choice(a=np.arange(1, 494),
+                                                        size=num_of_pokemon)]
 
         for pokemon in __party:
             pokemon.trainer_id = self.id
 
         self._party = __party
 
+        event_names = [
+                       'order',
+                       'move_id', 'item_id', 'switch_to_id',
+                       'damage_to_opponent', 'damage_to_self',
+                       'status_to_opponent', 'status_to_self',
+                       'attack_to_opponent', 'attack_to_self',
+                       'defence_to_opponent', 'defence_to_self',
+                       'specialAttack_to_opponent', 'specialAttack_to_self',
+                       'specialDefence_to_opponent', 'specialDefence_to_self',
+                       'speed_to_opponent', 'speed_to_self',
+                       'accuracy_to_opponent', 'accuracy_to_self',
+                       'evasion_to_opponent', 'evasion_to_self',
+                       'critical_to_opponent', 'critical_to_self'
+                       ]
 
         # The _events property is predefined to have 100 rows. This is
         # a bit faster than adding rows on the fly.
-        self._events = DataFrame(index=np.arange(1, 101))  # XXX: add cols
+        self._events = DataFrame(index=np.arange(1, 101),
+                                 columns=event_names,
+                                 data=np.zeros((100, len(event_names))))
 
-        self.__counter = 0
+        self.__counter = 0  # a counter for `__next__`
 
     def __iter__(self):
 
@@ -352,7 +367,7 @@ class Trainer():
     def party(self, slot=None):
         """
         Gets the Pokemone names in the party if no slot is selected.
-        Returns the Pokemon specified by slot if one has been chosen.
+        Returns the Pokemon specified by `slot` if one has been chosen.
         """
 
         if slot:
@@ -372,4 +387,4 @@ class Trainer():
         if event_name and value:
             self._events.loc[turn, event_name] = value
         else:
-            print(self._events)
+            return self._events

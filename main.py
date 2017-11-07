@@ -646,6 +646,3 @@ def attack(f1, m1, f2):
     if m1.meta_category_id in [0, 4, 6, 7, 8]:
         # For all moves that deal damage
         pass
-
-satoshi = Trainer()
-print(satoshi, satoshi.id, satoshi.name, satoshi.party)
