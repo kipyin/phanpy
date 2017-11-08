@@ -291,6 +291,17 @@ class Pokemon():
     def __repr__(self):
         return self.name
 
+    def __eq__(self, other):
+        """Assert equal between two pokemons.
+        If they have the same individual values and they have the
+        same name, then they are considered to be the same pokemon.
+        """
+        if ((self.iv.values == other.iv.values).all()
+                and self.trainer.id == other.trainer.id):
+            return True
+        else:
+            return False
+
     def reset_current(self):
         """The current stats should be reset after each battle,
         after changes made by leveling-up.
@@ -345,7 +356,7 @@ class Trainer():
 
                 multiIndexDict[(part, 'stats', name)] = __value_dict
 
-            multiIndexDict[(part, 'ailment')] = __value_dict
+            multiIndexDict[(part, 'status')] = __value_dict
             multiIndexDict[(part, 'damage')] = __value_dict
 
         # Create a dataframe from the dictionary.
@@ -406,9 +417,21 @@ class Trainer():
 
     def set_pokemon(self, slot, pokemon):
 
-        pokemon.trainer_id = self.id
         self._party[slot-1] = pokemon
+        self._party[slot-1].trainer = self
 
         print("{} is added to slot {}.".format(pokemon.name, slot))
 
 
+def test():
+    a = Trainer()
+    b = Trainer()
+    s = Pokemon(123)
+    ad = Pokemon(123)
+    a.set_pokemon(1, ad)
+    b.set_pokemon(1, Pokemon(123))
+    print(a.party(1) == b.party(1))
+    print(a, b)
+    print(s.trainer, ad.trainer)
+
+# test()

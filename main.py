@@ -14,6 +14,7 @@ from functools import reduce
 import numpy as np
 from numpy.random import binomial, uniform
 
+from mechanisms.config import turn
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
@@ -213,11 +214,9 @@ def burn(f1, m1):
     """
     if (('burn' in f1.status) and (f1.ability != 62) and
             (m1.damage_class_id == 2)):
-
         return 0.5
 
     else:
-
         return 1
 
 
@@ -247,7 +246,7 @@ def regular_damage(f1, m1, f2, m2):
         A = f1.current.specialAttack
         D = f2.current.specialDefense
 
-    if effect == 155:
+    if effect == 155:  # Beat-up
         # Inflicts {mechanic:typeless} {mechanic:regular-damage}.
         # Every Pokémon in the user's party, excepting those that have
         # fainted or have a {mechanic:major-status-effect}, attacks the
@@ -625,7 +624,21 @@ def regular_damage(f1, m1, f2, m2):
         # All cases up to Gen.5 should be covered.
         power = m1.power
 
-    return (2 + (2 * (f1.level/5 + 1) * power * A/D) // 50) * modifiers
+    base_damage = (2 + (2 * (f1.level/5 + 1) * power * A/D) // 50) * modifiers
+
+    if not np.isnan(m1.min_hits):
+        # If the move hits multiple times.
+        # XXX: in the actual game, the critical modifier is determined
+        # every time the move makes a hit.
+        return base_damage * np.random.choice(np.arange(m1.min_hits,
+                                                        m1.max_hits+1))
+    else:
+        return base_damage
+
+
+def charge(f1, m1, f2, m2):
+    """Calculates the damage for all moves require charging."""
+    pass
 
 
 def direct_damage(f1, m1, f2, m2):
@@ -757,6 +770,38 @@ def direct_damage(f1, m1, f2, m2):
         return regular_damage(f1, m1, f2, m2)
 
 
+def stat_changer(f1, m1, f2, m2):
+
+    effect = m1.effect_id
+
+    def whose_stat(p):
+        if p == f1:
+            events = f1.trainer.events.self.stats
+        else:
+            events = f1.trainer.events.opponent.stats
+
+        for i, name in enumerate(p.CURRENT_STAT_NAMES):
+            if i + 1 in m1.stat_change.stat_id:
+                p.stage[name] += m1.stat_change.change[i+1]
+                events.loc[turn, name] += m1.stat_change.change[i+1]
+
+    if effect == 340:  # also 351
+        # Raises the Attack and Special Attack of all []{type:grass}
+        # Pokémon in battle.
+        if 12 in f1.types:
+            f1.stage.attack += 1
+            f1.stage.specialAttack += 1
+        if 12 in f2.types:
+            f2.stage.attack += 1
+            f2.stage.specialAttack += 1
+
+    if m1.target_id in [3, 7, 13]:
+        whose_stat(f1)
+
+    elif m1.target_id in [9, 10, 11]:
+        whose_stat(f2)
+
+
 def attack(f1, m1, f2, m2):
     """f1 uses m1 to attack f2.
 
@@ -778,9 +823,41 @@ def attack(f1, m1, f2, m2):
             # and if not, then returns the regular damage.
             damage = np.floor(direct_damage(f1, m1, f2, m2))
 
-        else:
-            pass
+        if not str(m1.stat_change).isnumeric():
+            # stat-changers
+            stat_changer(f1, m1, f2, m2)
     else:
         pass
 
 
+#def test():
+#    from mechanisms.core.pokemon import Trainer
+#    iteration = 0
+#
+#    while iteration < 6:
+#
+#        red = Trainer('Red')
+#        green = Trainer('Green')
+#        turn = 1
+#
+#        while turn <= 50:
+#            p1 = red.party(np.random.choice([1, 2, 3]))
+#            p2 = green.party(np.random.choice([1, 2, 3]))
+#
+#            m1 = p1.moves[np.random.choice(np.arange(len(p1.moves)))]
+#            m2 = p2.moves[np.random.choice(np.arange(len(p2.moves)))]
+#
+#            f1, m1, f2, m2 = order_of_attack(p1, m1, p2, m2)
+#            attack(f1, m1, f2, m2)
+#            turn += 1
+##            except Exception as e:
+##                print(e)
+##                raise Exception('Iteration: {}, Attacker: {}, Move: {},'
+##                                ' Effect: {}, '
+##                                'Exception: {}'.format(iteration,
+##                                                       p1.name, m1.name,
+##                                                       m1.effect_id, e))
+#
+#        iteration += 1
+#
+#test()

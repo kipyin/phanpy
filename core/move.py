@@ -96,6 +96,8 @@ class Move():
 
             __condition = move_meta_stat_changes["move_id"] == self.id
             self.stat_change = move_meta_stat_changes[__condition]
+        else:
+            self.stat_change = 0
 
         self.name = self.identifier
 

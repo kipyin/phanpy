@@ -6,15 +6,12 @@ import timeit as t
 s = '''
 import numpy as np
 from mechanisms.main import order_of_attack, attack
+from mechanisms.config import turn
 from mechanisms.core.pokemon import Trainer, Pokemon
 from mechanisms.core.move import Move
 
-global turn
-
 def test():
 
-    global turn
-    turn = 1
     iteration = 0
 
     while iteration < 6:
@@ -45,4 +42,4 @@ def test():
 '''
 
 
-print(t.timeit('test()', setup=s, number=1))
+print(t.timeit('test()', setup=s, number=10))

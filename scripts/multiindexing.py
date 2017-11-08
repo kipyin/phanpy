@@ -19,6 +19,7 @@ for part in ['self', 'opponent']:
 
     for name in statnames:
         multiIndexDict[(part, 'stat_change', name)] = values
+        multiIndexDict[(part, 'ailment')] = values
 
 events = pd.DataFrame(multiIndexDict)
 
@@ -26,9 +27,6 @@ __zeros = np.zeros((50, 1))
 
 for top in ['order', 'move', 'item']:
     events[top] = __zeros
-
-for part in ['self', 'opponent']:
-    events.loc[:, [part, 'ailment'] = __zeros
 
 events.index.names = ['turn']
 

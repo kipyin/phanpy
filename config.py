@@ -11,6 +11,8 @@ from collections import namedtuple
 
 from pandas import read_csv
 
+turn = 1
+
 FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 ROOT_PATH = FILE_PATH.replace('/mechanisms', '')
 CORE_PATH = FILE_PATH + '/core'
