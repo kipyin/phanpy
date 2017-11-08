@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Nov  5 14:22:39 2017
+'''# Activate these codes when import fails.
+import os
+import sys
 
-@author: Kip
-"""
+file_path = os.path.dirname(os.path.abspath(__file__))
+root_path = file_path.replace('/mechanisms', '')
 
-# """Activate these codes when import fails."""
-# import os
-# import sys
-#
-# file_path = os.path.dirname(os.path.abspath(__file__))
-# root_path = file_path.replace('/mechanisms', '')
-#
-# sys.path.append(root_path) if root_path not in sys.path else None
-
+sys.path.append(root_path) if root_path not in sys.path else None
+'''
+from functools import reduce
 
 import numpy as np
-from numpy.random import binomial, uniform
+from np.random import binomial, uniform
 
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
 # XXX: consider merging all classes to one file.
+from mechanisms.core.item import Item
 from mechanisms.core.pokemon import Trainer, Pokemon
 from mechanisms.core.move import Move
+from mechanisms.core.status import Status
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -175,22 +172,98 @@ def hit_indicator(f1, m1, f2):
         return binomial(1., p)
 
 
-def critical_indicator(f1, m1, f2):
+def critical(f1, m1):
     """Returns 2 if a hit is critical else 1 (Gen.II ~ Gen.V).
 
     # XXX: moves exempt from critical hit calculation?
     """
-    pass
+    f1.stage.critical += m1.crit_rate
+
+    critical_chances = {0: 1/16.,
+                        1: 1/8.,
+                        2: 1/4.,
+                        3: 1/3.,
+                        4: 1/2.}
+
+    p = critical_chances[f1.stage.critical]
+
+    critical_rv = binomial(1, p)
+
+    # Since critical_rv is either 0 or 1, and we want the return either
+    # 1 or 2, we can just add 1 to the random variable.
+    return critical_rv + 1
 
 
-def regular_damage(f1, m1, f2):
+def stab(f1, m1):
+    """Return 1.5 if the move's type is one of the user's types,
+    otherwise return 0, unless the user's ability is Adaptibility,
+    in which case return 2.
+    """
+    if m1.type_id in f1.types:
+        return 2 if f1.ability == 91 else 1.5
+
+    else:
+        return 1
+
+
+def burn(f1, m1):
+    """If the user is burned and trying to use a physical move, return
+    0.5, otherwise return 1, unless the user's ability is Guts, in
+    which case also return 1.
+    """
+    if (('burn' in f1.status) and (f1.ability != 62) and
+            (m1.damage_class_id == 2)):
+
+        return 0.5
+
+    else:
+
+        return 1
+
+
+def regular_damage(f1, m1, f2, m2):
     """Retuns the damage for all moves deals regular damage.
     """
     global turn
 
     effect = m1.effect_id
 
-    if effect == 100:
+    critical_modifier = critical(f1, m1)
+    type_modifier = efficacy(m1.type_id, f2.types)
+    random_modifier = uniform(0.85, 1.)
+    stab_modifier = stab(f1, m1)
+    burn_modifier = burn(f1, m1)
+    weather_modifier = 1.
+    other_modifier = 1.
+
+    modifier_list = [critical_modifier, type_modifier, random_modifier,
+                     stab_modifier, burn_modifier, weather_modifier,
+                     other_modifier]
+
+    modifiers = reduce(lambda x, y: x * y, modifier_list)
+
+    if m1.damage_class_id == 2:
+        A = f1.current.attack
+        D = f2.current.defense
+    else:
+        A = f1.current.specialAttack
+        D = f2.current.specialDefense
+
+    if effect == 155:
+        # Inflicts {mechanic:typeless} {mechanic:regular-damage}.
+        # Every Pokémon in the user's party, excepting those that have
+        # fainted or have a {mechanic:major-status-effect}, attacks the
+        # target.
+        # Calculated stats are ignored; the base stats for the target
+        # and assorted attackers are used instead.
+        # The random factor in the damage formula is not used.
+        # []{type:dark} Pokémon still get [STAB]{mechanic:stab}.
+        modifiers /= random_modifier
+        A = f1.stats.attack
+        D = f2.stats.defense
+        power = 40.
+
+    elif effect == 100:
         # Inflicts [regular damage]{mechanic:regular-damage}.
         # Power varies inversely with the user's proportional remaining
         # [HP]{mechanic:hp}.
@@ -259,7 +332,7 @@ def regular_damage(f1, m1, f2):
             power = 40
 
         else:
-            power = -.25 * f2.stats.hp
+            return -.25 * f2.stats.hp
 
     elif effect == 124:
         # Inflicts {mechanic:regular-damage}.
@@ -312,6 +385,9 @@ def regular_damage(f1, m1, f2):
         else:
             power = 150
 
+        if 'underground' in f2.status:
+            power *= 2
+
     elif effect == 162:
         # Inflicts [regular damage]{mechanic:regular-damage}.
         # Power is equal to 100 times the amount of energy stored by
@@ -327,12 +403,13 @@ def regular_damage(f1, m1, f2):
         if 'stockpile' in f1.flags.keys():
             energy = f1.flags.pop('stockpile')
             power = energy * 100.
-            f1.current.defense = f1.flags.pop('defense_at_stockpile')
-            f1.current.specialDefense = f1.flags.pop('specialDefense_'
-                                                     'at_stockpile')
+            A = f1.flags.pop('defense_at_stockpile')
+            D = f1.flags.pop('specialDefense_at_stockpile')
 
         else:
             power = 0
+
+        modifiers /= random_modifier
 
     elif effect == 197:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -396,8 +473,10 @@ def regular_damage(f1, m1, f2):
 
             power = __subset["power"].values[0]
 
+            f1.item = Item(0)
+
         else:
-            pwoer = 0
+            power = 0
 
     elif effect == 234:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -427,7 +506,7 @@ def regular_damage(f1, m1, f2):
         # Inflicts [regular damage]{mechanic:regular-damage}.
         # Power is determined by the [PP]{mechanic:pp} remaining for
         # this move, after its [PP]{mechanic:pp} cost is deducted.
-        # Ignores {mechanic:accuracy} and {mechanic:evasion} modifiers.
+        # XXX: Ignores {mechanic:accuracy} and {mechanic:evasion} modifiers.
         #
         # PP remaining | Power
         # ------------ | ----:
@@ -467,6 +546,24 @@ def regular_damage(f1, m1, f2):
         power = np.clip(a=(1. + 120. * f1.current.hp/f1.stats.hp),
                         a_max=121,
                         a_min=0)
+
+    elif effect == 242:
+        # If the target has selected a damaging move this turn, the
+        # user will copy that move and use it against the target, with
+        # a 50% increase in power.
+        #
+        # If the target moves before the user, this move will
+        # [fail]{mechanic:fail}.
+        #
+        # This move cannot be copied by []{move:mirror-move}, nor
+        # selected by []{move:assist}, []{move:metronome}, or
+        # []{move:sleep-talk}.
+
+        if f1.order == 2 and m2.damage_class_id != 1:
+            power = m2.power * 1.5
+            m1.type_id = m2.type_id
+        else:
+            power = 0
 
     elif effect == 246:
         # Inflicts [regular damage]{mechanic:regular-damage}.
@@ -528,18 +625,19 @@ def regular_damage(f1, m1, f2):
         # All cases up to Gen.5 should be covered.
         power = m1.power
 
-    # damage = (calculations)
+    return (2 + (2 * (f1.level/5 + 1) * power * A/D) // 50) * modifiers
 
 
 def deals_direct_damage(m1):
     """An indicator function returns True if `m1` deals direct damage.
     """
+    # XXX: incomplete
     # list_of_moves_with_dd = (some_kind_of_list)
     # return m1 in list_of_moves_with_dd
     return True
 
 
-def direct_damage(f1, m1, f2):
+def direct_damage(f1, m1, f2, m2):
     """Calculates the damage for moves deal direct damage.
     """
     effect = m1.effect_id
@@ -557,7 +655,7 @@ def direct_damage(f1, m1, f2):
         # is [typeless]{mechanic:typeless}.
         #
         # This move cannot be selected by []{move:sleep-talk}.
-        # XXX: event log
+        # XXX: group moves with `charge` flag into a new function.
         pass
 
     elif effect == 41:
@@ -586,13 +684,17 @@ def direct_damage(f1, m1, f2):
         # Inflicts twice the damage that move did to the user.
         # If there is no eligible target, this move will fail.
         # Type immunity applies, but other type effects are ignored.
-        # XXX; event log
-        pass
+
+        if f1.order == 2:
+            received_damage = f2.trainer.events.opponent.damage[turn].values
+            if received_damage.any() and m2.damage_class_id == 2:
+                return immuned(received_damage * 2)
+        else:
+            return 0
 
     elif effect == 131:
         # Inflicts exactly 20 damage.
-        # XXX: type-immunity?
-        return 20
+        return immuned(20.)
 
     elif effect == 145:
         # Targets the last opposing Pokémon to hit the user with a
@@ -601,8 +703,13 @@ def direct_damage(f1, m1, f2):
         # If there is no eligible target, this move will
         # [fail]{mechanic:fail}.
         # Type immunity applies, but other type effects are ignored.
-        # XXX: event-log. Similar to effect 90.
-        pass
+
+        if f1.order == 2:
+            received_damage = f2.trainer.events.opponent.damage[turn].values
+            if received_damage.any() and m2.damage_class_id == 3:
+                return immuned(received_damage * 2)
+        else:
+            return 0
 
     elif effect == 155:
         # Inflicts {mechanic:typeless} {mechanic:regular-damage}.
@@ -613,9 +720,11 @@ def direct_damage(f1, m1, f2):
         # and assorted attackers are used instead.
         # The random factor in the damage formula is not used.
         # []{type:dark} Pokémon still get [STAB]{mechanic:stab}.
-        # XXX: event-log.
 
-        pass
+        for pokemon in f1.trainer.party():
+            if pokemon.status.volatile.all():
+                damage += regular_damage(pokemon, m, f2, m2)
+        return damage
 
     elif effect == 190:
         # Inflicts exactly enough damage to lower the target's
@@ -623,9 +732,9 @@ def direct_damage(f1, m1, f2):
         # higher than the user's, this move has no effect.
         # Type immunity applies, but other type effects are ignored.
         # This effect counts as damage for moves that respond to damage.
-        return np.clip(a=f2.current.hp - f1.current.hp,
-                       a_min=0,
-                       a_max=f2.current.hp)
+        return immuned(np.clip(a=f2.current.hp - f1.current.hp,
+                               a_min=0,
+                               a_max=f2.current.hp))
 
     elif effect == 228:
         # Targets the last opposing Pokémon to hit the user with a
@@ -633,31 +742,21 @@ def direct_damage(f1, m1, f2):
         # Inflicts 1.5× the damage that move did to the user.
         # If there is no eligible target, this move will fail.
         # Type immunity applies, but other type effects are ignored.
-        # XXX: event-log.
 
-        pass
-
-    elif effect == 242:
-        # If the target has selected a damaging move this turn, the
-        # user will copy that move and use it against the target, with
-        # a 50% increase in power.
-        #
-        # If the target moves before the user, this move will
-        # [fail]{mechanic:fail}.
-        #
-        # This move cannot be copied by []{move:mirror-move}, nor
-        # selected by []{move:assist}, []{move:metronome}, or
-        # []{move:sleep-talk}.
-        # XXX: event-log
-
-        pass
+        if f1.order == 2:
+            received_damage = f2.trainer.events.opponent.damage[turn].values
+            if (received_damage.any() and m2.damage_class_id != 1):
+                return immuned(received_damage * 1.5)
+        else:
+            return 0.
 
     elif effect == 321:
         # Inflicts damage equal to the user's remaining
         # [HP]{mechanic:hp}.  User faints.
 
-        power = f1.current.hp
+        damage = f1.current.hp
         f1.current.hp = 0
+        f1.trainer.events.self.damage[turn] = f1.current.hp
 
         return damage
 
@@ -680,20 +779,22 @@ def attack(f1, m1, f2):
         other damage
     """
 
-    # Determine if the move is hit or not.
-    modifier_hit = hit_indicator(f1, m1, f2)
-
-    if m1.meta_category_id in [0, 4, 6, 7, 8]:
-        # For all moves that deal damage
-        #
-        # if (the hit deals direct damage):
-        #   damage = direct_damage(f1, m1, f2)
-        # else:
-        #   m1.power = power(f1, m1, f2)
-        #   damage = (regular_damage_calculation)
+    if hit_indicator(f1, m1, f2):
+        # Determine if the move is hit or not.
+        if m1.meta_category_id in [0, 4, 6, 7, 8]:
+            # For all moves that deal damage
+            #
+            # if (the hit deals direct damage):
+            #   damage = direct_damage(f1, m1, f2)
+            # else:
+            #   m1.power = power(f1, m1, f2)
+            #   damage = (regular_damage_calculation)
+            pass
 
 
 def test():
+
+    turn = 1
     red = Trainer('Red')
     green = Trainer('Green')
 
@@ -706,5 +807,6 @@ def test():
     print(order_of_attack(p1, m1, p2, m2))
     print(can_use_the_selected_move(p1, m1))
     print(can_select_a_move(p2, m2))
+
 
 test()
