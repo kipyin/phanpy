@@ -83,6 +83,3 @@ with open(custom_path + 'move_flag_map.csv') as csv_file:
 
 with open(custom_path + 'move_natural_gift.csv') as csv_file:
     move_natural_gift = read_csv(csv_file)
-
-with open(custom_path + 'event_log.csv') as csv_file:
-    event_log = read_csv(csv_file)
