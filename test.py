@@ -41,5 +41,5 @@ def test():
         iteration += 1
 '''
 
-
-print(t.timeit('test()', setup=s, number=10))
+# test()
+print(str(t.timeit('test()', setup=s, number=10)) + 's')

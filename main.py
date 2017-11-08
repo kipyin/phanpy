@@ -12,7 +12,7 @@ sys.path.append(root_path) if root_path not in sys.path else None
 from functools import reduce
 
 import numpy as np
-from numpy.random import binomial, uniform
+from numpy.random import binomial, uniform, randint
 
 from mechanisms.config import turn
 from mechanisms.core.helpers import efficacy
@@ -770,20 +770,26 @@ def direct_damage(f1, m1, f2, m2):
         return regular_damage(f1, m1, f2, m2)
 
 
-def stat_changer(f1, m1, f2, m2):
+def change_stats(f1, m1, f2, m2):
 
     effect = m1.effect_id
 
     def whose_stat(p):
+        chance = m1.effect_chance
+
         if p == f1:
             events = f1.trainer.events.self.stats
         else:
             events = f1.trainer.events.opponent.stats
 
-        for i, name in enumerate(p.CURRENT_STAT_NAMES):
-            if i + 1 in m1.stat_change.stat_id:
-                p.stage[name] += m1.stat_change.change[i+1]
-                events.loc[turn, name] += m1.stat_change.change[i+1]
+        if np.isnan(chance):
+            chance = 100.
+
+        if binomial(1, chance/100.):
+            for i, name in enumerate(p.CURRENT_STAT_NAMES):
+                if i + 1 in m1.stat_change.stat_id:
+                    p.stage[name] += m1.stat_change.change[i+1]
+                    events.loc[turn, name] += m1.stat_change.change[i+1]
 
     if effect == 340:  # also 351
         # Raises the Attack and Special Attack of all []{type:grass}
@@ -802,6 +808,36 @@ def stat_changer(f1, m1, f2, m2):
         whose_stat(f2)
 
 
+def inflict_ailment(f1, m1, f2, m2):
+    """Inflicts ailment to the selected target."""
+
+    ailment_id = m1.meta_ailment_id
+    ailment_chance = 100. if np.isnan(m1.ailment_chance) else m1.ailment_chance
+    lasting_turns = None if np.isnan(m1.min_turns) else randint(m1.min_turns,
+                                                                m1.max_turns+1)
+    ailment = Status(ailment_id, lasting_turns)
+
+    events_self = f1.trainer.events.self.status
+    events_opponent = f1.trainer.events.opponent.status
+
+    if binomial(1, ailment_chance/100.):
+        if m1.target_id == 7:
+            # Self-inflicted ailment
+            f1.status += ailment
+            events_self[turn] = ailment.name
+        elif m1.target_id == 14:
+            # ailment inflicted to all pokemons.
+            f1.status += ailment
+            f2.status += ailment
+            events_self[turn] = ailment.name
+            events_opponent[turn] = ailment.name
+        else:
+            # ailment inflicted to the opponent
+            f2.status += ailment
+            events_opponent[turn] = ailment.name
+
+
+# Order, move, and item should be recorded before calling this function.
 def attack(f1, m1, f2, m2):
     """f1 uses m1 to attack f2.
 
@@ -814,50 +850,30 @@ def attack(f1, m1, f2, m2):
         direct damage
         other damage
     """
-
+    events = f1.trainer.events
     if the_move_hits_the_target(f1, m1, f2):
         # Determine if the move is hit or not.
+
         if m1.damage_class_id in [2, 3]:
             # For all moves that deal damage.
             # `direct_damage` checks if a move deals direct damage,
             # and if not, then returns the regular damage.
+
             damage = np.floor(direct_damage(f1, m1, f2, m2))
+
+            # if this number is negative, then the move heals the
+            # opponent.
+
+            events.opponent.damage[turn] = damage
 
         if not str(m1.stat_change).isnumeric():
             # stat-changers
-            stat_changer(f1, m1, f2, m2)
+            change_stats(f1, m1, f2, m2)
+
+        if m1.meta_category_id in[1, 5]:
+            # moves that inflicts status conditions.
+            inflict_ailment(f1, m1, f2, m2)
+        # print(f1.trainer.events.loc[turn, :])
+        # XXX: not event is being recorded! WHY!
     else:
         pass
-
-
-#def test():
-#    from mechanisms.core.pokemon import Trainer
-#    iteration = 0
-#
-#    while iteration < 6:
-#
-#        red = Trainer('Red')
-#        green = Trainer('Green')
-#        turn = 1
-#
-#        while turn <= 50:
-#            p1 = red.party(np.random.choice([1, 2, 3]))
-#            p2 = green.party(np.random.choice([1, 2, 3]))
-#
-#            m1 = p1.moves[np.random.choice(np.arange(len(p1.moves)))]
-#            m2 = p2.moves[np.random.choice(np.arange(len(p2.moves)))]
-#
-#            f1, m1, f2, m2 = order_of_attack(p1, m1, p2, m2)
-#            attack(f1, m1, f2, m2)
-#            turn += 1
-##            except Exception as e:
-##                print(e)
-##                raise Exception('Iteration: {}, Attacker: {}, Move: {},'
-##                                ' Effect: {}, '
-##                                'Exception: {}'.format(iteration,
-##                                                       p1.name, m1.name,
-##                                                       m1.effect_id, e))
-#
-#        iteration += 1
-#
-#test()
