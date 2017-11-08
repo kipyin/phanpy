@@ -12,15 +12,13 @@ sys.path.append(root_path) if root_path not in sys.path else None
 from functools import reduce
 
 import numpy as np
-from np.random import binomial, uniform
+from numpy.random import binomial, uniform
 
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
 # XXX: consider merging all classes to one file.
 from mechanisms.core.item import Item
-from mechanisms.core.pokemon import Trainer, Pokemon
-from mechanisms.core.move import Move
 from mechanisms.core.status import Status
 
 
@@ -113,7 +111,7 @@ def can_use_the_selected_move(f, m):
     return True
 
 
-def hit_indicator(f1, m1, f2):
+def the_move_hits_the_target(f1, m1, f2):
     """Returns 1 if a move is hit else 0."""
 
     if 'taking-aim' in f2.status:
@@ -179,6 +177,8 @@ def critical(f1, m1):
     """
     f1.stage.critical += m1.crit_rate
 
+    f1.stage.critical = np.clip(a=f1.stage.critical, a_max=4, a_min=0)
+
     critical_chances = {0: 1/16.,
                         1: 1/8.,
                         2: 1/4.,
@@ -224,8 +224,6 @@ def burn(f1, m1):
 def regular_damage(f1, m1, f2, m2):
     """Retuns the damage for all moves deals regular damage.
     """
-    global turn
-
     effect = m1.effect_id
 
     critical_modifier = critical(f1, m1)
@@ -499,6 +497,8 @@ def regular_damage(f1, m1, f2, m2):
 
             if f1.item.fling_power:
                 power = f1.item.fling_power
+            else:
+                power = 0
         else:
             power = 0
 
@@ -578,10 +578,10 @@ def regular_damage(f1, m1, f2, m2):
         stats_in_interest = ['attack', 'defense', 'specialAttack',
                              'specialDefense', 'speed']
 
-        __e_s = f1.trainer.events.opponent.stats.loc[:turn, stats_in_interest]
+        __e_s = f1.trainer.events.opponent.stats.loc[:, stats_in_interest]
         __e_s = __e_s[__e_s > 0]
 
-        __e_o = f2.trainer.events.self.stats.loc[:turn, stats_in_interest]
+        __e_o = f2.trainer.events.self.stats.loc[:, stats_in_interest]
         __e_o = __e_o[__e_o > 0]
 
         total_increase = (__e_s.sum().sum()
@@ -628,15 +628,6 @@ def regular_damage(f1, m1, f2, m2):
     return (2 + (2 * (f1.level/5 + 1) * power * A/D) // 50) * modifiers
 
 
-def deals_direct_damage(m1):
-    """An indicator function returns True if `m1` deals direct damage.
-    """
-    # XXX: incomplete
-    # list_of_moves_with_dd = (some_kind_of_list)
-    # return m1 in list_of_moves_with_dd
-    return True
-
-
 def direct_damage(f1, m1, f2, m2):
     """Calculates the damage for moves deal direct damage.
     """
@@ -656,7 +647,7 @@ def direct_damage(f1, m1, f2, m2):
         #
         # This move cannot be selected by []{move:sleep-talk}.
         # XXX: group moves with `charge` flag into a new function.
-        pass
+        return 100
 
     elif effect == 41:
         # Inflicts [typeless]{mechanic:typeless} damage equal to half
@@ -721,9 +712,10 @@ def direct_damage(f1, m1, f2, m2):
         # The random factor in the damage formula is not used.
         # []{type:dark} Pokémon still get [STAB]{mechanic:stab}.
 
+        damage = 0
         for pokemon in f1.trainer.party():
             if pokemon.status.volatile.all():
-                damage += regular_damage(pokemon, m, f2, m2)
+                damage += regular_damage(pokemon, m1, f2, m2)
         return damage
 
     elif effect == 190:
@@ -762,11 +754,10 @@ def direct_damage(f1, m1, f2, m2):
 
     else:
         # All cases up to Gen.5 should be covered.
-        raise ValueError("{}'s effect is not covered!"
-                         " (effect id {})".format(m1.name, m1.effect_id))
+        return regular_damage(f1, m1, f2, m2)
 
 
-def attack(f1, m1, f2):
+def attack(f1, m1, f2, m2):
     """f1 uses m1 to attack f2.
 
     Given f1 is mobile. Given f1 attacks first.
@@ -779,34 +770,17 @@ def attack(f1, m1, f2):
         other damage
     """
 
-    if hit_indicator(f1, m1, f2):
+    if the_move_hits_the_target(f1, m1, f2):
         # Determine if the move is hit or not.
-        if m1.meta_category_id in [0, 4, 6, 7, 8]:
-            # For all moves that deal damage
-            #
-            # if (the hit deals direct damage):
-            #   damage = direct_damage(f1, m1, f2)
-            # else:
-            #   m1.power = power(f1, m1, f2)
-            #   damage = (regular_damage_calculation)
+        if m1.damage_class_id in [2, 3]:
+            # For all moves that deal damage.
+            # `direct_damage` checks if a move deals direct damage,
+            # and if not, then returns the regular damage.
+            damage = np.floor(direct_damage(f1, m1, f2, m2))
+
+        else:
             pass
+    else:
+        pass
 
 
-def test():
-
-    turn = 1
-    red = Trainer('Red')
-    green = Trainer('Green')
-
-    p1 = red.party(np.random.choice([1, 2, 3]))
-    p2 = green.party(np.random.choice([1, 2, 3]))
-
-    m1 = p1.moves[np.random.choice(np.arange(1, 5))]
-    m2 = p2.moves[np.random.choice(np.arange(1, 5))]
-
-    print(order_of_attack(p1, m1, p2, m2))
-    print(can_use_the_selected_move(p1, m1))
-    print(can_select_a_move(p2, m2))
-
-
-test()
