@@ -267,6 +267,15 @@ class Pokemon():
         # Should items have their own class? Probably not?
         self.item = Item(0)
 
+        if self.item.id in [303, 209]:
+
+            self.stage.critical = 1
+
+        elif ((self.id == 83 and self.item.id == 236) or
+              (self.id == 113 and self.item.id == 233)):
+
+            self.stage.critical = 2
+
         self.trainer = None
 
         # 1 if this pokemon moves first, 2 if it moves second, and so on.
@@ -337,6 +346,7 @@ class Trainer():
                 multiIndexDict[(part, 'stats', name)] = __value_dict
 
             multiIndexDict[(part, 'ailment')] = __value_dict
+            multiIndexDict[(part, 'damage')] = __value_dict
 
         # Create a dataframe from the dictionary.
         __events = DataFrame(multiIndexDict)
@@ -347,7 +357,7 @@ class Trainer():
             __events[top] = __zeros
 
         # Set the index name.
-        __events.index.names('turn')
+        __events.index.names = ['turn']
 
         # ... and finally
         # No longer making `events` a protected property, due to its
