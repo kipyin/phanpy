@@ -14,7 +14,7 @@ def test():
 
     iteration = 0
 
-    while iteration < 6:
+    while iteration < 1:
 
         red = Trainer('Red')
         green = Trainer('Green')
@@ -37,9 +37,10 @@ def test():
                                 'Exception: {}'.format(iteration,
                                                        p1.name, m1.name,
                                                        m1.effect_id, e))
-
+        print(p2.trainer.events.any(),
+              p1.trainer.events.any())
         iteration += 1
 '''
 
 # test()
-print(str(t.timeit('test()', setup=s, number=10)) + 's')
+print(str(t.timeit('test()', setup=s, number=5)) + 's')

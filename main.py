@@ -22,6 +22,7 @@ from mechanisms.data.tables import move_natural_gift
 # XXX: consider merging all classes into one file.
 from mechanisms.core.item import Item
 from mechanisms.core.status import Status
+from mechanisms.core.pokemon import Trainer
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -772,15 +773,23 @@ def direct_damage(f1, m1, f2, m2):
 
 
 def change_stats(f1, m1, f2, m2):
+    """Activates m1's effects. The target is dependent upon m1's
+    target_id.
+    """
 
     effect = m1.effect_id
 
     def whose_stat(p):
+        """Changes p's stats."""
         chance = m1.effect_chance
 
         if p == f1:
+            # If p is the user, record the stat changes to the user's
+            # event log.
             events = f1.trainer.events.self.stats
         else:
+            # If p is the opponent, record the stat changes to the
+            # opponent's event log.
             events = f1.trainer.events.opponent.stats
 
         if np.isnan(chance):
@@ -792,7 +801,7 @@ def change_stats(f1, m1, f2, m2):
                     p.stage[name] += m1.stat_change.change[i+1]
                     events.loc[turn, name] += m1.stat_change.change[i+1]
 
-    if effect == 340:  # also 351
+    if effect == 340:  # also effect 351
         # Raises the Attack and Special Attack of all []{type:grass}
         # Pokémon in battle.
         if 12 in f1.types:
@@ -803,9 +812,11 @@ def change_stats(f1, m1, f2, m2):
             f2.stage.specialAttack += 1
 
     if m1.target_id in [3, 7, 13]:
+        # Stats changes to the user.
         whose_stat(f1)
 
     elif m1.target_id in [9, 10, 11]:
+        # Stats changes to the opponent.
         whose_stat(f2)
 
 
@@ -825,17 +836,17 @@ def inflict_ailment(f1, m1, f2, m2):
         if m1.target_id == 7:
             # Self-inflicted ailment
             f1.status += ailment
-            events_self[turn] = ailment.name
+            events_self.loc[turn, ] = ailment.name
         elif m1.target_id == 14:
             # ailment inflicted to all pokemons.
             f1.status += ailment
             f2.status += ailment
-            events_self[turn] = ailment.name
-            events_opponent[turn] = ailment.name
+            events_self.loc[turn, ] = ailment.name
+            events_opponent[turn, ] = ailment.name
         else:
             # ailment inflicted to the opponent
             f2.status += ailment
-            events_opponent[turn] = ailment.name
+            events_opponent.loc[turn, ] = ailment.name
 
 
 # Order, move, and item should be recorded before calling this function.
@@ -851,6 +862,7 @@ def attack(f1, m1, f2, m2):
         direct damage
         other damage
     """
+    global turn
     events = f1.trainer.events
     if the_move_hits_the_target(f1, m1, f2):
         # Determine if the move is hit or not.
@@ -861,11 +873,16 @@ def attack(f1, m1, f2, m2):
             # and if not, then returns the regular damage.
 
             damage = np.floor(direct_damage(f1, m1, f2, m2))
-
+            print("{} dealt {} to {}!\n".format(f1.name, damage, f2.name))
+            f2.current.hp -= damage
+            if f2.current.hp <= 0 or not f1.current.hp <= 0:
+                # 1 indicates that one side is fainting and the current
+                # round is ended.
+                return 0
             # if this number is negative, then the move heals the
             # opponent.
 
-            events.opponent.damage[turn] = damage
+            events.opponent.damage.loc[turn, ] = damage
 
         if not str(m1.stat_change).isnumeric():
             # stat-changers
@@ -878,3 +895,72 @@ def attack(f1, m1, f2, m2):
         # XXX: not event is being recorded! WHY!
     else:
         pass
+    turn += 1
+
+    return 1  # returning 0 means the game goes on.
+
+
+def battle(player=None, ai=None, display=True):
+    """A quick prototype that simulates a battle. `player` and `ai` are
+    both Trainer objects.
+    Set `display` to False shut all display up.
+    """
+    if not ai:
+        # If the ai's pokemon is not specified, then randomize one
+        ai = Trainer('Shigeru')
+    if not player:
+        player = Trainer('Satoshi')
+
+    p1 = player.party(1)
+    p2 = ai.party(1)
+
+    if display:
+        for (u, p) in zip([player, ai], [p1, p2]):
+            print("{} chooses No.{} {}!\n".format(u.name, p.id, p.name),
+                  "{}'s hp: {}\n".format(p.name, p.stats.hp))
+
+    end = False
+
+    while not end:
+        m1 = p1.moves[randint(0, len(p1.moves))]
+        m2 = p2.moves[randint(0, len(p2.moves))]
+
+        f1, m1, f2, m2 = order_of_attack(p1, m1, p2, m2)
+
+        if display:
+            for (p, m) in zip([p1, p2], [m1, m2]):
+                print("{} uses {}!\n".format(p.name, m.name))
+                print("The move {}'s info:\n"
+                      "Power: {}, Accuracy: {}\n".format(m.name,
+                                                         m.power,
+                                                         m.accuracy))
+            print("{} attacks first!\n".format(f1.name))
+
+        for (f, m, g, n) in zip([f1, f2], [m1, m2], [f2, f1], [m2, m1]):
+
+            if can_select_a_move(f, m):
+                if can_use_the_selected_move(f, m):
+                    if the_move_hits_the_target(f, m, g):
+                        # this is ugly
+                        res = attack(f, m, g, n)
+                        if display:
+                            print("{}'s hp: {}\n"
+                                  "{}'s hp: {}\n".format(f.name, f.current.hp,
+                                                         g.name, g.current.hp))
+                        if res:
+                            if display:
+                                print("The battle has ended")
+                            end = True
+                            break
+                    elif display:
+                        print("{} missed the attack!\n".format(f.name))
+                elif display:
+                    print("{} cannot use the move!\n".format(f.name))
+                    continue
+
+            else:
+                if display:
+                    print('{} cannot move!\n'.format(f.name))
+                continue
+
+battle()

@@ -424,14 +424,26 @@ class Trainer():
 
 
 def test():
+    from mechanisms.main import attack
     a = Trainer()
     b = Trainer()
     s = Pokemon(123)
     ad = Pokemon(123)
-    a.set_pokemon(1, ad)
-    b.set_pokemon(1, Pokemon(123))
-    print(a.party(1) == b.party(1))
-    print(a, b)
-    print(s.trainer, ad.trainer)
+
+    p1 = a.party(2)
+    p2 = b.party(2)
+    m1 = p1.moves[1]
+    m2 = p2.moves[1]
+
+    attack(p1, m1, p2, m2)
+#    a.set_pokemon(1, ad)
+#    b.set_pokemon(1, Pokemon(123))
+#    print(a.party(1) == b.party(1))
+#    print(a, b)
+#    print(s.trainer, ad.trainer)
+
+    events = a.events.self.stats
+    events.loc[1, 'attack'] = 100
+    print(a.events.self[:5])
 
 # test()
