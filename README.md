@@ -1,4 +1,4 @@
-# [WIP] pokemon-battle-mechanisms
+# pokemon-battle-mechanisms
 
 The battle mechanisms for Pokémon games.
 
@@ -15,6 +15,7 @@ generations of the main series games, generations 3 and 4 are at the top of the 
 ## Battle Style
 
 The battle style this project is aiming at is much like that of the 3-on-3 single battle at [the Battle Tower](https://bulbapedia.bulbagarden.net/wiki/Battle_Tower_(Generation_III) ), where each player chooses 3 Pokemons with the same level at random. This battle style greatly reduces the number of variables, while retaining the important feature in the games. 
+
 The following features have been exempted from the battle:
 
 - experience
@@ -51,8 +52,9 @@ One notable thing about `Status` is that it is **addible**. For example:
 ```
 When adding two non-volatile statuses together, because they can’t stack, the newer one gets to replace the older one.
 
-One can also iterate through all the statuses, by using
+One can also iterate through a `Status` object, by using
 ```python
+>>> some_status = Status(12) + Status(4) + ...
 >>> [x for x in some_status]
 ```
 ### Class: Trainer
