@@ -14,7 +14,7 @@ generations of the main series games, generations 3 and 4 are at the top of the 
 
 ## Battle Style
 
-The battle style this project is aiming at is much like that of the 3-on-3 single battle at [the Battle Tower](https://bulbapedia.bulbagarden.net/wiki/Battle_Tower_(Generation_III) ), where each player chooses 3 Pokemons with the same level at random. This battle style greatly reduces the number of variables, while retaining the important feature in the games. 
+The battle style this project is aiming at is much like that of the 3-on-3 single battle at [the Battle Tower](https://bulbapedia.bulbagarden.net/wiki/Battle_Tower_(Generation_III) ), where each player chooses 3 Pokemons with the same level at random. This battle style greatly reduces the number of variables, while retaining the important features in the games. 
 
 The following features have been exempted from the battle:
 

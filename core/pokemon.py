@@ -442,8 +442,8 @@ def test():
 #    print(a, b)
 #    print(s.trainer, ad.trainer)
 
-    events = a.events.self.stats
-    events.loc[1, 'attack'] = 100
-    print(a.events.self[:5])
+    events = a.events.self.status
+    events.loc[1, ] = 100
+    print(a.events.self.status[:5])
 
 # test()

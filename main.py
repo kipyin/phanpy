@@ -22,7 +22,7 @@ from mechanisms.data.tables import move_natural_gift
 # XXX: consider merging all classes into one file.
 from mechanisms.core.item import Item
 from mechanisms.core.status import Status
-from mechanisms.core.pokemon import Trainer
+
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -692,7 +692,7 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage[turn].values
+            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
             if received_damage.any() and m2.damage_class_id == 2:
                 return immuned(received_damage * 2)
         else:
@@ -711,7 +711,7 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage[turn].values
+            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
             if received_damage.any() and m2.damage_class_id == 3:
                 return immuned(received_damage * 2)
         else:
@@ -751,7 +751,7 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage[turn].values
+            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
             if (received_damage.any() and m2.damage_class_id != 1):
                 return immuned(received_damage * 1.5)
         else:
@@ -842,11 +842,12 @@ def inflict_ailment(f1, m1, f2, m2):
             f1.status += ailment
             f2.status += ailment
             events_self.loc[turn, ] = ailment.name
-            events_opponent[turn, ] = ailment.name
+            events_opponent.loc[turn, ] = ailment.name
         else:
             # ailment inflicted to the opponent
             f2.status += ailment
             events_opponent.loc[turn, ] = ailment.name
+        print(f1.status, f2.status)
 
 
 # Order, move, and item should be recorded before calling this function.
@@ -873,12 +874,9 @@ def attack(f1, m1, f2, m2):
             # and if not, then returns the regular damage.
 
             damage = np.floor(direct_damage(f1, m1, f2, m2))
-            print("{} dealt {} to {}!\n".format(f1.name, damage, f2.name))
+            # print("{} dealt {} to {}!\n".format(f1.name, damage, f2.name))
             f2.current.hp -= damage
-            if f2.current.hp <= 0 or not f1.current.hp <= 0:
-                # 1 indicates that one side is fainting and the current
-                # round is ended.
-                return 0
+
             # if this number is negative, then the move heals the
             # opponent.
 
@@ -895,9 +893,6 @@ def attack(f1, m1, f2, m2):
         # XXX: not event is being recorded! WHY!
     else:
         pass
-    turn += 1
-
-    return 1  # returning 0 means the game goes on.
 
 
 def battle(player=None, ai=None, display=True):
@@ -905,6 +900,7 @@ def battle(player=None, ai=None, display=True):
     both Trainer objects.
     Set `display` to False shut all display up.
     """
+    from mechanisms.core.pokemon import Trainer
     if not ai:
         # If the ai's pokemon is not specified, then randomize one
         ai = Trainer('Shigeru')
@@ -920,6 +916,8 @@ def battle(player=None, ai=None, display=True):
                   "{}'s hp: {}\n".format(p.name, p.stats.hp))
 
     end = False
+    global turn
+    turn = 1
 
     while not end:
         m1 = p1.moves[randint(0, len(p1.moves))]
@@ -928,6 +926,7 @@ def battle(player=None, ai=None, display=True):
         f1, m1, f2, m2 = order_of_attack(p1, m1, p2, m2)
 
         if display:
+            print("==============================")
             for (p, m) in zip([p1, p2], [m1, m2]):
                 print("{} uses {}!\n".format(p.name, m.name))
                 print("The move {}'s info:\n"
@@ -942,16 +941,11 @@ def battle(player=None, ai=None, display=True):
                 if can_use_the_selected_move(f, m):
                     if the_move_hits_the_target(f, m, g):
                         # this is ugly
-                        res = attack(f, m, g, n)
+                        attack(f, m, g, n)
                         if display:
                             print("{}'s hp: {}\n"
                                   "{}'s hp: {}\n".format(f.name, f.current.hp,
                                                          g.name, g.current.hp))
-                        if res:
-                            if display:
-                                print("The battle has ended")
-                            end = True
-                            break
                     elif display:
                         print("{} missed the attack!\n".format(f.name))
                 elif display:
@@ -963,4 +957,20 @@ def battle(player=None, ai=None, display=True):
                     print('{} cannot move!\n'.format(f.name))
                 continue
 
-battle()
+            if f2.current.hp <= 0 or f1.current.hp <= 0:
+                # 0 indicates that one side is fainting and the current
+                # round is ended.
+                if display:
+                    print("The battle has ended")
+                end = True
+                break
+
+        turn += 1
+
+    if player.events.opponent.status.any().any():
+        print("YES")
+
+
+for i in range(50):
+    print('{}...'.format(i))
+    battle(display=True)
