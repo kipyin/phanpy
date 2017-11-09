@@ -9,6 +9,7 @@ root_path = file_path.replace('/mechanisms', '')
 
 sys.path.append(root_path) if root_path not in sys.path else None
 '''
+
 from functools import reduce
 
 import numpy as np
@@ -18,7 +19,7 @@ from mechanisms.config import turn
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
-# XXX: consider merging all classes to one file.
+# XXX: consider merging all classes into one file.
 from mechanisms.core.item import Item
 from mechanisms.core.status import Status
 
