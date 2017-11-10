@@ -828,7 +828,7 @@ def inflict_ailment(f1, m1, f2, m2):
             f2.status += ailment
 
 
-def ailment_damage(f1, m1):
+def ailment_damage(f1, m1, f2, m2):
     """Takes the damage if the pokemon has certain statuses. The damage
     is effect **at the end of the turn**.
 
@@ -836,11 +836,11 @@ def ailment_damage(f1, m1):
     if 'burn' in f1.status and f1.ability != 'guts':
         f1.current.hp -= f1.stats.hp // 8.
 
-    if {'poison', 'leech-seed', 'bound'} & set(f1.status):
+    if {'poison', 'leech-seed'} & set(f1.status):
 
         f1.current.hp -= f1.stats.hp // 8.
 
-    if 'ingrain' in f1.status:
+    if {'ingrain', 'aqua-ring'} & set(f1.status):
 
         recovery = f1.stats.hp // 16.
 
@@ -855,7 +855,12 @@ def ailment_damage(f1, m1):
 
     if 'trap' in f1.status:
 
-        f1.current.hp -= f1.stats.hp // 16.
+        damage = f1.stats.hp // 16.
+
+        if f2.item.name == 'binding-band':
+            damage *= 2.
+
+        f1.current.hp -= damage
 
 
 # Order, move, and item should be recorded before calling this function.
