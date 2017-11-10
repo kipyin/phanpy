@@ -68,21 +68,20 @@ class Pokemon():
     def __init__(self, which_pokemon, level=50):
         # XXX: the try-except clause does nothing..?
 
-        try:
-            if str(which_pokemon).isnumeric():
-                # If `which_pokemon` is a number between 1 and 802
-                __condition = tb.pokemon['id'] == which_pokemon
+        if which_pokemon in list(tb.pokemon.id.values):
+            # If `which_pokemon` is a valid id.
+            __condition = tb.pokemon['id'] == which_pokemon
 
-            elif type(which_pokemon) is str:
-                # Else if `which_pokemon` is a valid Pokémon name
-                __condition = tb.pokemon['identifier'] == which_pokemon
+        elif which_pokemon in tb.pokemon.identifier.values:
+            # Else if `which_pokemon` is a valid Pokémon name
+            __condition = tb.pokemon['identifier'] == which_pokemon
 
-            # Set the id depending on the case.
-            pokemon_id = int(tb.pokemon[__condition].id)
+        else:
+            raise KeyError("`pokemon` has to be an integer"
+                           " or a pokemon's name.")
 
-        except TypeError:
-            raise TypeError("`pokemon` has to be an integer"
-                            " or a pokemon's name.")
+        # Set the id depending on the case.
+        pokemon_id = int(tb.pokemon[__condition].id)
 
         # Set the label corresponds to the given id in the DataFrame.
         LABEL = list(tb.pokemon[tb.pokemon["id"] == pokemon_id].index)[0]
@@ -91,6 +90,7 @@ class Pokemon():
 
         self.id = tb.pokemon.loc[LABEL, "id"]
         self.identifier = tb.pokemon.loc[LABEL, "identifier"]
+        self.weight = tb.pokemon.loc[LABEL, 'weight']
 
         # -------- Initialization from `pokemon_species.csv` --------- #
 
@@ -123,15 +123,12 @@ class Pokemon():
         self.types = list(tb.pokemon_types[__condition]["type_id"])
 
         # Checks if `level` is valid.
-        try:
+        if level in np.arange(1, 101):
             self.level = level
 
-        except TypeError:
+        else:
             raise TypeError("`level` has to be an integer"
                             " or an integer string.")
-
-        if self.level not in range(1, 101):
-            raise ValueError("Level should be in range(1,101).")
 
         # ----------- BASE STAT, IV, & EV Initialization ------------- #
 
@@ -148,9 +145,22 @@ class Pokemon():
                     index=self.STAT_NAMES
                         )
 
-        # Set the actual EV the Pokémon has. Defaults to 0.
+        # Set the actual EV the Pokémon has.
         # Needed for stats calculation.
-        self.ev = Series(data=[0. for x in range(6)],
+
+        # Insert marks to 5 randomly selected positions.
+        __marks = np.append([np.random.uniform(0, 1) for x in range(5)], 1.)
+
+        # Add endpoints.
+        __marks = np.append(0., __marks)
+
+        # Multiply __marks by 510, we get the cumulative EV of a pokemon.
+        __cumulative_ev = np.floor(np.sort(__marks) * 510.)
+
+        # Calculate the difference between consecutive elements
+        __ev = np.ediff1d(__cumulative_ev)
+
+        self.ev = Series(data=__ev,
                          index=self.STAT_NAMES)
 
         # ------------------ NATURE Initialization ------------------- #
@@ -392,6 +402,7 @@ def test():
     s = Pokemon(123)
     ad = Pokemon(123)
 
+    print(sum(s.ev), ad.ev)
     p1 = a.party(2)
     p2 = b.party(2)
     m1 = p1.moves[1]
@@ -404,8 +415,5 @@ def test():
 #    print(a, b)
 #    print(s.trainer, ad.trainer)
 
-    events = a.events.self.status
-    events.loc[1, ] = 100
-    print(a.events.self.status[:5])
 
-# test()
+test()
