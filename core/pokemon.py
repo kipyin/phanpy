@@ -91,7 +91,6 @@ class Pokemon():
 
         self.id = tb.pokemon.loc[LABEL, "id"]
         self.identifier = tb.pokemon.loc[LABEL, "identifier"]
-        self.species_id = tb.pokemon.loc[LABEL, "species_id"]
 
         # -------- Initialization from `pokemon_species.csv` --------- #
 
@@ -337,43 +336,6 @@ class Trainer():
             pokemon.trainer = self
 
         self._party = __party
-
-        # `event` property is a multi-indexed DataFrame, with 50
-        # predefined rows filled with 0's.
-        statnames = ['attack', 'defense', 'specialAttack', 'specialDefense',
-                     'speed', 'critical', 'accuracy', 'evasion']
-
-        # This dictionary will define the indices and values of `events`.
-        multiIndexDict = defaultdict(dict)
-
-        # 50 predefined rows, all have 0. in values.
-        # This is a single column in `events`.
-        __value_dict = {k: 0. for k in np.arange(1, 51)}
-
-        # Append 'columns' to the dictionary.
-        for part in ['self', 'opponent']:
-            for name in statnames:
-
-                multiIndexDict[(part, 'stats', name)] = __value_dict
-
-            multiIndexDict[(part, 'status')] = __value_dict
-            multiIndexDict[(part, 'damage')] = __value_dict
-
-        # Create a dataframe from the dictionary.
-        __events = DataFrame(multiIndexDict)
-
-        # Add three top-level columns.
-        __zeros = np.zeros((50, 1))
-        for top in ['order', 'move', 'item']:
-            __events[top] = __zeros
-
-        # Set the index name.
-        __events.index.names = ['turn']
-
-        # ... and finally
-        # No longer making `events` a protected property, due to its
-        # complex level structure.
-        self.events = __events
 
         self.__counter = 0  # a counter for `__next__`
 
