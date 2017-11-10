@@ -836,9 +836,26 @@ def ailment_damage(f1, m1):
     if 'burn' in f1.status and f1.ability != 'guts':
         f1.current.hp -= f1.stats.hp // 8.
 
-    if {'poison', 'leech-seed'} & set(f1.status):
+    if {'poison', 'leech-seed', 'bound'} & set(f1.status):
 
         f1.current.hp -= f1.stats.hp // 8.
+
+    if 'ingrain' in f1.status:
+
+        recovery = f1.stats.hp // 16.
+
+        if f1.item.name == 'big-root':
+            recovery = np.floor(1.3 * recovery)
+
+        f1.current.hp += recovery
+
+    if {'nightmare', 'sleep'} <= set(f1.status) or 'curse' in f1.status:
+
+        f1.current.hp -= f1.stats.hp // 4.
+
+    if 'trap' in f1.status:
+
+        f1.current.hp -= f1.stats.hp // 16.
 
 
 # Order, move, and item should be recorded before calling this function.
