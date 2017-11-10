@@ -856,16 +856,29 @@ def attack(f1, m1, f2, m2):
 
             # if this number is negative, then the move heals the
             # opponent.
+
+            if not np.isnan(m1.drain):
+                # A negative drain means a recoil damage.
+                # A positive drain means absoring from the opponent.
+                f1.current.hp += m1.drain/100. * damage
+
         else:
             f2.history.damage.appendleft(0)
 
-            if not str(m1.stat_change).isnumeric():
-                # stat-changers
-                stat_changer(f1, m1, f2, m2)
+        if not np.isnan(m1.heal):
+            # A positive heal cures the user; a negative heal damages
+            # the user, based on the user's max hp.
+            f1.current.hp += m1.heal/100. * f1.stats.hp
 
-            if m1.meta_category_id in[1, 5]:
-                # moves that inflicts status conditions.
-                inflict_ailment(f1, m1, f2, m2)
+        if not str(m1.stat_change).isnumeric():
+            # stat-changers
+            stat_changer(f1, m1, f2, m2)
+
+        if m1.meta_category_id in[1, 5]:
+            # moves that inflicts status conditions.
+            inflict_ailment(f1, m1, f2, m2)
+
+
 
     else:
         pass
@@ -942,7 +955,7 @@ def battle(player=None, ai=None, display=True):
 
 
 def test():
-    for i in range(100):
+    for i in range(10):
         battle(display=False)
 
 
