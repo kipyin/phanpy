@@ -126,7 +126,7 @@ class Status():
         Usage
         -----
             >>> for status in Pokemon(123).status
-            ...
+            ...     # do something
 
         """
         return self
@@ -187,11 +187,33 @@ class Status():
         """
         return True if 0 not in self.id else False
 
-    def cut(self):
+    def reduce(self):
         """Subtract 1 from all durations.
 
         """
         self.duration -= 1
+
+    def remove(self, which_status):
+        """Remove the given status. `which_status` can be a valid status
+        id, or a valid status name. If no instances of `which_status` is
+        found, removes nothing.
+
+        """
+
+        if which_status in list(self.name):
+            # There should be at most 1 occurance.
+            mask = self.name != which_status
+        elif which_status in list(self.id):
+            mask = self.id != which_status
+        else:
+            mask = self.name == self.name
+            print('Warning: Status({}) is not in the list. '
+                  'Nothing is removed.'.format(which_status))
+
+        self.duration = self.duration[mask]
+        self.id = self.id[mask]
+        self.name = self.name[mask]
+        self.volatile = self.volatile[mask]
 
 
 def test():
