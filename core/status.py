@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sat Nov  4 04:22:57 2017
@@ -63,10 +64,6 @@ class Status():
     """
 
     def __init__(self, status=None, duration=float('inf')):
-
-        # If status is not given, then assign it as an empty string.
-
-        status = status if status else ''
 
         if status in list(ailments.id.values):
             # If the input is a valid id, get the status name from the
@@ -144,7 +141,7 @@ class Status():
 
         else:
             self.__current += 1
-            yield list(self.name)[self.__current - 1]
+            return list(self.name)[self.__current - 1]
 
     def __contains__(self, item):
         """
@@ -166,25 +163,32 @@ class Status():
 
         Append volatile statuses; replace non-volatile statuses.
         """
-        if self.volatile.all() or self.volatile.all():
+        new = Status(0)
+
+        new.duration = self.duration
+        new.name = self.name
+        new.id = self.id
+        new.volatile = self.volatile
+
+        if self.volatile.all() or other.volatile.all():
             # As long as not both of them have a non-volatile status
             # at the same time...(double negative, sorry).
-            self.duration = np.append(self.duration, other.duration)
-            self.id = np.append(self.id, other.id)
-            self.name = np.append(self.name, other.name)
-            self.volatile = np.append(self.volatile, other.volatile)
+            new.duration = np.append(self.duration, other.duration)
+            new.id = np.append(self.id, other.id)
+            new.name = np.append(self.name, other.name)
+            new.volatile = np.append(self.volatile, other.volatile)
         else:
             # If both of them have a non-volatile status at the same
             # time, replace `self`'s non-volatile status with that of
             # `other`'s.
             nvol_pos = np.where(~self.volatile)[0][0]
 
-            self.duration[nvol_pos] = other.duration[0]
-            self.id[nvol_pos] = other.id[0]
-            self.name[nvol_pos] = other.name[0]
-            self.volatile[nvol_pos] = other.volatile[0]
+            new.duration[nvol_pos] = other.duration[0]
+            new.id[nvol_pos] = other.id[0]
+            new.name[nvol_pos] = other.name[0]
+            new.volatile[nvol_pos] = other.volatile[0]
 
-        return self
+        return new
 
     def __bool__(self):
         """Returns True if 0 is not in the status id's.
@@ -195,6 +199,13 @@ class Status():
 
         """
         return True if 0 not in self.id and len(self.id) == 1 else False
+
+    def __eq__(self, other):
+        return set(self.name) == set(other.name)
+
+    def __hash__(self):
+        """Returns the names as a set."""
+        return set(self.name)
 
     def remove(self, which_status):
         """Remove the given status. `which_status` can be a valid status
@@ -252,6 +263,8 @@ def test():
     new_combined.remove(4)
     print(new_combined.duration)
     print([3 if new_combined else 5])
+    print([Status(x) for x in range(4)])
+    print(set(new_combined))
 
 
 # test()

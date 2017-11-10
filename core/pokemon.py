@@ -7,7 +7,7 @@ Created on Sat Nov  4 15:56:47 2017
 """
 from collections import deque, defaultdict
 
-from pandas import Series, DataFrame
+from pandas import Series
 import numpy as np
 
 from mechanisms.core.item import Item
@@ -286,6 +286,7 @@ class Pokemon():
         # Any miscellaneous flag and its duration a Pokémon might have,
         # such as {'stockpile': 1.}, where the meaning of the value(s)
         # depends on the flag.
+        # XXX Change the flags' type to ``namedtuple``?
         self.flags = defaultdict()
 
         # Should items have their own class? Probably not?
@@ -320,8 +321,7 @@ class Pokemon():
         If they have the same individual values and they have the
         same name, then they are considered to be the same pokemon.
         """
-        if ((self.iv.values == other.iv.values).all()
-                and self.trainer.id == other.trainer.id):
+        if (self.iv.values == other.iv.values).all():
             return True
         else:
             return False
@@ -343,7 +343,6 @@ class Pokemon():
 class Trainer():
     """Some awesome introductions.
     """
-    global turn
 
     def __init__(self, name=None, num_of_pokemon=3):
 
@@ -411,15 +410,16 @@ class Trainer():
 
 
 def test():
-    from mechanisms.main import attack
-    a = Trainer()
-    b = Trainer()
-    s = Pokemon(123)
-    ad = Pokemon(123)
+#    a = Trainer()
+#    b = Trainer()
+    p1 = Pokemon(123)
+    p2 = Pokemon(246)
+    p1.status += Status(4)
+    # print(set(p1.status))
 
-    print(sum(s.ev), ad.ev)
-    p1 = a.party(2)
-    p2 = b.party(2)
+    print(sum(p1.ev), p2.ev)
+#    p1 = a.party(2)
+#    p2 = b.party(2)
     m1 = p1.moves[1]
     m2 = p2.moves[1]
 
