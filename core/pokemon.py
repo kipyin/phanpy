@@ -160,8 +160,7 @@ class Pokemon():
         # Calculate the difference between consecutive elements
         __ev = np.ediff1d(__cumulative_ev)
 
-        self.ev = Series(data=__ev,
-                         index=self.STAT_NAMES)
+        self.ev = Series(data=__ev, index=self.STAT_NAMES)
 
         # ------------------ NATURE Initialization ------------------- #
 
@@ -263,7 +262,14 @@ class Pokemon():
                         (tb.pokemon_moves.level < self.level + 1))
 
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
-        _default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
+        num_of_moves = np.clip(a=4,
+                               a_max=len(__all_moves),
+                               a_min=1)
+
+        _default_moves = ([Move(x) for x in
+                          np.random.choice(__all_moves.values,
+                                           num_of_moves,
+                                           replace=False)])
 
         self.moves = _default_moves
 
@@ -271,7 +277,7 @@ class Pokemon():
 
         # Any miscellaneous flags a Pokémon might have, such as
         # 'critical-rate-changed'.
-        self.flags = defaultdict()
+        self.flags = defaultdict(bool)
 
         # Should items have their own class? Probably not?
         self.item = Item(0)
@@ -408,7 +414,8 @@ def test():
     m1 = p1.moves[1]
     m2 = p2.moves[1]
 
-    attack(p1, m1, p2, m2)
+    print(p1.moves)
+    # attack(p1, m1, p2, m2)
 #    a.set_pokemon(1, ad)
 #    b.set_pokemon(1, Pokemon(123))
 #    print(a.party(1) == b.party(1))
