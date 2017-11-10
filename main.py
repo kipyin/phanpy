@@ -870,6 +870,12 @@ def attack(f1, m1, f2, m2):
             # the user, based on the user's max hp.
             f1.current.hp += m1.heal/100. * f1.stats.hp
 
+        if not np.isnan(m1.flinch_chance):
+            # If the move makes the opponent flinch, then add `flinch`
+            # to the opponent's status.
+            if binomial(1, m1.flinch_chance/100.):
+                f2.status += Status('flinch')
+
         if not str(m1.stat_change).isnumeric():
             # stat-changers
             stat_changer(f1, m1, f2, m2)
@@ -877,8 +883,6 @@ def attack(f1, m1, f2, m2):
         if m1.meta_category_id in[1, 5]:
             # moves that inflicts status conditions.
             inflict_ailment(f1, m1, f2, m2)
-
-
 
     else:
         pass
