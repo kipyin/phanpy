@@ -13,16 +13,14 @@ sys.path.append(root_path) if root_path not in sys.path else None
 from functools import reduce
 
 import numpy as np
-from numpy.random import binomial, uniform, randint
+from numpy.random import binomial, uniform, randint, choice
 
-from mechanisms.config import turn
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
 # XXX: consider merging all classes into one file.
 from mechanisms.core.item import Item
 from mechanisms.core.status import Status
-
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -70,7 +68,7 @@ def can_select_a_move(f, m):
         return True
 
 
-def can_use_the_selected_move(f, m):
+def is_mobile(f, m):
     """If the Pokémon is able to **use** a selected move, return True.
 
     Not be able to move if suffer from:
@@ -82,7 +80,7 @@ def can_use_the_selected_move(f, m):
         {status: infatuation} (w.p. 0.5),
         {status: semi-invulnerable} (need to be added to
             `move_meta_ailments.csv`),
-        {status: taking-in-sunlight} (need to be added),
+        {status: taking-in-sunlight} (need to be added) <- charge,
         {status: withdrawing} (need to be added).
     """
 
@@ -91,10 +89,10 @@ def can_use_the_selected_move(f, m):
     if f.order == 2 and 'flinch' in statuses:
         # A Pokémon can only flinch if it is hit by another Pokémon's
         # move before using its move.
-        return True
+        return False
 
     elif 'paralysis' in statuses:
-        return bool(binomial(1., 0.25))
+        return bool(binomial(1., 0.75))  # 75% chance not to be paralyzed
 
     elif 'infatuation' in statuses:
         return bool(binomial(1., 0.5))
@@ -114,7 +112,7 @@ def can_use_the_selected_move(f, m):
     return True
 
 
-def the_move_hits_the_target(f1, m1, f2):
+def makes_hit(f1, m1, f2):
     """Returns 1 if a move is hit else 0."""
 
     if 'taking-aim' in f2.status:
@@ -125,7 +123,7 @@ def the_move_hits_the_target(f1, m1, f2):
         # 'lock-on'.
         return 1
 
-    elif f2.status.semi_invulnerable:
+    elif 'semi-invulnerable' in f2.status:
         # XXX: best way to do this? This works.
         # If the opponent is semi-invulnerable, i.e. if the opponent
         # used bounce, fly, sky-drop, dig, or dive. Unless the user's
@@ -202,7 +200,7 @@ def stab(f1, m1):
     otherwise return 0, unless the user's ability is Adaptibility,
     in which case return 2.
     """
-    if m1.type_id in f1.types:
+    if m1.type in f1.types:
         return 2 if f1.ability == 91 else 1.5
 
     else:
@@ -228,7 +226,7 @@ def regular_damage(f1, m1, f2, m2):
     effect = m1.effect_id
 
     critical_modifier = critical(f1, m1)
-    type_modifier = efficacy(m1.type_id, f2.types)
+    type_modifier = efficacy(m1.type, f2.types)
     random_modifier = uniform(0.85, 1.)
     stab_modifier = stab(f1, m1)
     burn_modifier = burn(f1, m1)
@@ -399,7 +397,7 @@ def regular_damage(f1, m1, f2, m2):
         # {mechanic:fail}.
         # XXX: pass
 
-        if 'stockpile' in f1.flags.keys():
+        if 'stockpile' in f1.flags:
             energy = f1.flags.pop('stockpile')
             power = energy * 100.
             A = f1.flags.pop('defense_at_stockpile')
@@ -468,7 +466,7 @@ def regular_damage(f1, m1, f2, m2):
         if __cond.any():
             # If there is at least one match
             __subset = move_natural_gift[__cond]
-            m1.type_id = __subset["type_id"].values[0]
+            m1.type = __subset["type_id"].values[0]
 
             power = __subset["power"].values[0]
 
@@ -562,7 +560,7 @@ def regular_damage(f1, m1, f2, m2):
 
         if f1.order == 2 and m2.damage_class_id != 1:
             power = m2.power * 1.5
-            m1.type_id = m2.type_id
+            m1.type = m2.type
         else:
             power = 0
 
@@ -576,19 +574,7 @@ def regular_damage(f1, m1, f2, m2):
 
         # Counting **only** stat increases.
 
-        stats_in_interest = ['attack', 'defense', 'specialAttack',
-                             'specialDefense', 'speed']
-
-        __e_s = f1.trainer.events.opponent.stats.loc[:, stats_in_interest]
-        __e_s = __e_s[__e_s > 0]
-
-        __e_o = f2.trainer.events.self.stats.loc[:, stats_in_interest]
-        __e_o = __e_o[__e_o > 0]
-
-        total_increase = (__e_s.sum().sum()
-                          + __e_o.sum().sum())
-
-        power = np.clip(a=total_increase * 20 + 60,
+        power = np.clip(a=f2.history.stage * 20 + 60,
                         a_max=200,
                         a_min=0)
 
@@ -632,8 +618,8 @@ def regular_damage(f1, m1, f2, m2):
         # If the move hits multiple times.
         # XXX: in the actual game, the critical modifier is determined
         # every time the move makes a hit.
-        return base_damage * np.random.choice(np.arange(m1.min_hits,
-                                                        m1.max_hits+1))
+        return base_damage * choice(np.arange(m1.min_hits,
+                                              m1.max_hits+1))
     else:
         return base_damage
 
@@ -652,7 +638,7 @@ def direct_damage(f1, m1, f2, m2):
         """A simple filter for damage that takes typ-immunity into
         account.
         """
-        return 0 if efficacy(m1.type_id, f2.types) == 0 else damage
+        return 0 if efficacy(m1.type, f2.types) == 0 else damage
 
     if effect == 27:
         # User waits for two turns.
@@ -662,7 +648,8 @@ def direct_damage(f1, m1, f2, m2):
         #
         # This move cannot be selected by []{move:sleep-talk}.
         # XXX: group moves with `charge` flag into a new function.
-        return 100
+        f1.flags += Status('bide', 2)
+        return 0
 
     elif effect == 41:
         # Inflicts [typeless]{mechanic:typeless} damage equal to half
@@ -682,7 +669,7 @@ def direct_damage(f1, m1, f2, m2):
         # Inflicts [typeless]{mechanic:typeless} damage between 50% and
         # 150% of the user's level, selected at random in increments of
         # 10%.
-        return f1.level * np.random.randint(5, 15)/10.
+        return f1.level * randint(5, 15)/10.
 
     elif effect == 90:
         # Targets the last opposing Pokémon to hit the user with a
@@ -692,11 +679,11 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
+            received_damage = f1.history.damage[0]
             if received_damage.any() and m2.damage_class_id == 2:
                 return immuned(received_damage * 2)
-        else:
-            return 0
+
+        return 0
 
     elif effect == 131:
         # Inflicts exactly 20 damage.
@@ -711,11 +698,11 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
-            if received_damage.any() and m2.damage_class_id == 3:
+            received_damage = f1.history.damage[0]
+            if received_damage and m2.damage_class_id == 3:
                 return immuned(received_damage * 2)
-        else:
-            return 0
+
+        return 0
 
     elif effect == 155:
         # Inflicts {mechanic:typeless} {mechanic:regular-damage}.
@@ -751,11 +738,11 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
+            received_damage = f1.history.damage[0]
             if (received_damage.any() and m2.damage_class_id != 1):
                 return immuned(received_damage * 1.5)
-        else:
-            return 0.
+
+        return 0.
 
     elif effect == 321:
         # Inflicts damage equal to the user's remaining
@@ -763,7 +750,6 @@ def direct_damage(f1, m1, f2, m2):
 
         damage = f1.current.hp
         f1.current.hp = 0
-        f1.trainer.events.self.damage[turn] = f1.current.hp
 
         return damage
 
@@ -772,7 +758,7 @@ def direct_damage(f1, m1, f2, m2):
         return regular_damage(f1, m1, f2, m2)
 
 
-def change_stats(f1, m1, f2, m2):
+def stat_changer(f1, m1, f2, m2):
     """Activates m1's effects. The target is dependent upon m1's
     target_id.
     """
@@ -783,33 +769,30 @@ def change_stats(f1, m1, f2, m2):
         """Changes p's stats."""
         chance = m1.effect_chance
 
-        if p == f1:
-            # If p is the user, record the stat changes to the user's
-            # event log.
-            events = f1.trainer.events.self.stats
-        else:
-            # If p is the opponent, record the stat changes to the
-            # opponent's event log.
-            events = f1.trainer.events.opponent.stats
-
         if np.isnan(chance):
             chance = 100.
 
         if binomial(1, chance/100.):
             for i, name in enumerate(p.CURRENT_STAT_NAMES):
                 if i + 1 in m1.stat_change.stat_id:
-                    p.stage[name] += m1.stat_change.change[i+1]
-                    events.loc[turn, name] += m1.stat_change.change[i+1]
+
+                    change = m1.stat_change.change[i+1]
+                    p.stage[name] += change
+
+                    if i + 1 not in [7, 8] and change > 0:
+                        # exclude accuracy and evasion.
+                        p.history.stage += change
+                        print("\n++++++++ {}' stat {} is increased "
+                              "by {}.++++++++ \n".format(p.name, i+1, change))
 
     if effect == 340:  # also effect 351
         # Raises the Attack and Special Attack of all []{type:grass}
         # Pokémon in battle.
         if 12 in f1.types:
-            f1.stage.attack += 1
-            f1.stage.specialAttack += 1
+            whose_stat(f1)
+
         if 12 in f2.types:
-            f2.stage.attack += 1
-            f2.stage.specialAttack += 1
+            whose_stat(f2)
 
     if m1.target_id in [3, 7, 13]:
         # Stats changes to the user.
@@ -829,25 +812,19 @@ def inflict_ailment(f1, m1, f2, m2):
                                                                 m1.max_turns+1)
     ailment = Status(ailment_id, lasting_turns)
 
-    events_self = f1.trainer.events.self.status
-    events_opponent = f1.trainer.events.opponent.status
-
     if binomial(1, ailment_chance/100.):
         if m1.target_id == 7:
             # Self-inflicted ailment
             f1.status += ailment
-            events_self.loc[turn, ] = ailment.name
+
         elif m1.target_id == 14:
             # ailment inflicted to all pokemons.
             f1.status += ailment
             f2.status += ailment
-            events_self.loc[turn, ] = ailment.name
-            events_opponent.loc[turn, ] = ailment.name
+
         else:
             # ailment inflicted to the opponent
             f2.status += ailment
-            events_opponent.loc[turn, ] = ailment.name
-        print(f1.status, f2.status)
 
 
 # Order, move, and item should be recorded before calling this function.
@@ -863,9 +840,8 @@ def attack(f1, m1, f2, m2):
         direct damage
         other damage
     """
-    global turn
-    events = f1.trainer.events
-    if the_move_hits_the_target(f1, m1, f2):
+
+    if makes_hit(f1, m1, f2):
         # Determine if the move is hit or not.
 
         if m1.damage_class_id in [2, 3]:
@@ -876,21 +852,21 @@ def attack(f1, m1, f2, m2):
             damage = np.floor(direct_damage(f1, m1, f2, m2))
             # print("{} dealt {} to {}!\n".format(f1.name, damage, f2.name))
             f2.current.hp -= damage
+            f2.history.damage.appendleft(damage)
 
             # if this number is negative, then the move heals the
             # opponent.
+        else:
+            f2.history.damage.appendleft(0)
 
-            events.opponent.damage.loc[turn, ] = damage
+            if not str(m1.stat_change).isnumeric():
+                # stat-changers
+                stat_changer(f1, m1, f2, m2)
 
-        if not str(m1.stat_change).isnumeric():
-            # stat-changers
-            change_stats(f1, m1, f2, m2)
+            if m1.meta_category_id in[1, 5]:
+                # moves that inflicts status conditions.
+                inflict_ailment(f1, m1, f2, m2)
 
-        if m1.meta_category_id in[1, 5]:
-            # moves that inflicts status conditions.
-            inflict_ailment(f1, m1, f2, m2)
-        # print(f1.trainer.events.loc[turn, :])
-        # XXX: not event is being recorded! WHY!
     else:
         pass
 
@@ -927,27 +903,24 @@ def battle(player=None, ai=None, display=True):
 
         if display:
             print("==============================")
-            for (p, m) in zip([p1, p2], [m1, m2]):
-                print("{} uses {}!\n".format(p.name, m.name))
-                print("The move {}'s info:\n"
-                      "Power: {}, Accuracy: {}\n".format(m.name,
-                                                         m.power,
-                                                         m.accuracy))
-            print("{} attacks first!\n".format(f1.name))
 
         for (f, m, g, n) in zip([f1, f2], [m1, m2], [f2, f1], [m2, m1]):
 
             if can_select_a_move(f, m):
-                if can_use_the_selected_move(f, m):
-                    if the_move_hits_the_target(f, m, g):
-                        # this is ugly
-                        attack(f, m, g, n)
-                        if display:
-                            print("{}'s hp: {}\n"
-                                  "{}'s hp: {}\n".format(f.name, f.current.hp,
-                                                         g.name, g.current.hp))
-                    elif display:
-                        print("{} missed the attack!\n".format(f.name))
+                if is_mobile(f, m):
+                    if display:
+                        print("{} uses {}!\n".format(f.name, m.name))
+                        print("The move {}'s info:\n"
+                              "Power: {}, Accuracy: {}\n".format(m.name,
+                                                                 m.power,
+                                                                 m.accuracy))
+                    attack(f, m, g, n)
+
+                    # print(g.history)
+                    if display:
+                        print("{}'s hp: {}\n"
+                              "{}'s hp: {}\n".format(f.name, f.current.hp,
+                                                     g.name, g.current.hp))
                 elif display:
                     print("{} cannot use the move!\n".format(f.name))
                     continue
@@ -967,10 +940,10 @@ def battle(player=None, ai=None, display=True):
 
         turn += 1
 
-    if player.events.opponent.status.any().any():
-        print("YES")
+
+def test():
+    for i in range(100):
+        battle(display=False)
 
 
-for i in range(50):
-    print('{}...'.format(i))
-    battle(display=True)
+test()

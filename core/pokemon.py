@@ -253,6 +253,13 @@ class Pokemon():
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
 
+        # Records the received damages. Has a memory of 5 turns.
+        # If its length is over 5, delete the oldest damage.
+        __received_damage = deque([], maxlen=5)
+
+        self.history = Series(data=np.array([__received_damage, 0]),
+                              index=["damage", "stage"])
+
         # ------------------ Moves Initialization -------------------- #
 
         # A Pokemon defaults to learn the last 4 learnable moves at its
@@ -262,22 +269,23 @@ class Pokemon():
                         (tb.pokemon_moves.level < self.level + 1))
 
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
+
         num_of_moves = np.clip(a=4,
                                a_max=len(__all_moves),
                                a_min=1)
 
         _default_moves = ([Move(x) for x in
                           np.random.choice(__all_moves.values,
-                                           num_of_moves,
+                                           size=num_of_moves,
                                            replace=False)])
 
         self.moves = _default_moves
 
         # --------------------- Miscellaneous ------------------------ #
 
-        # Any miscellaneous flags a Pokémon might have, such as
-        # 'critical-rate-changed'.
-        self.flags = defaultdict(bool)
+        # Any miscellaneous flag and its duration a Pokémon might have,
+        # such as {'flinch': 1.}. The duration can be float('inf').
+        self.flags = Status()
 
         # Should items have their own class? Probably not?
         self.item = Item(0)
@@ -423,4 +431,4 @@ def test():
 #    print(s.trainer, ad.trainer)
 
 
-test()
+# test()
