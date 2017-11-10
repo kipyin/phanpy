@@ -37,10 +37,9 @@ def test():
                                 'Exception: {}'.format(iteration,
                                                        p1.name, m1.name,
                                                        m1.effect_id, e))
-        print(p2.trainer.events.any(),
-              p1.trainer.events.any())
+
         iteration += 1
 '''
 
 # test()
-print(str(t.timeit('test()', setup=s, number=5)) + 's')
+print(str(t.timeit('test()', setup=s, number=30)) + 's')

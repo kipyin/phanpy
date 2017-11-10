@@ -1,6 +1,8 @@
-# A short script on getting the occurance of each flag. 
+# A short script on getting the occurance of each flag.
 # I've probably spent more time writing these comments than on writing
 # the scripts.
+
+# Pandas' `value_counts` is much, much faster.
 
 fullpath = '/Users/Kip/Documents/GitHub/mechanisms/data'
 csvpath = paste(fullpath,'/csv/', sep='')

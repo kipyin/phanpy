@@ -21,12 +21,12 @@ class Status():
 
     The csv files call it an 'ailment'.
 
-    A `non-volatile` status is one of the following: paralysis, sleep,
+    A ``non-volatile`` status is one of the following: paralysis, sleep,
     freeze, burn, and poison, with some sub-categories under each if
     they exist. Non-volatile statuses cannot stack; one Pokémon can
     only have one non-volatile status each time.
 
-    A `volatile` status is the one that does not exist out side of a
+    A ``volatile`` status is the one that does not exist out side of a
     battle. Some classic examples would be confusion, ingrain,
     infatuation, etc. One can have multiple volatile statuses.
 
@@ -42,12 +42,13 @@ class Status():
     Attributes
     ----------
         id : numpy.array of int
-            The `ailment_id` in `move_meta_ailments.csv`.
+            The ``ailment_id`` in ``move_meta_ailments.csv``. If no
+            match is found, then randomly generate a pseudo-id.
         name : numpy.array of str
             The name of the status(es).
         volatile : numpy.array of bool
             True for volatile statuses, and False for non-volatile
-            statuses (id in 1~5).
+            statuses (id in 0~5).
 
     Built-in Methods
     ----------------
@@ -61,7 +62,11 @@ class Status():
         https://bulbapedia.bulbagarden.net/wiki/Status_condition
     """
 
-    def __init__(self, status, duration=float('inf')):
+    def __init__(self, status=None, duration=float('inf')):
+
+        # If status is not given, then assign it as an empty string.
+
+        status = status if status else ''
 
         if status in list(ailments.id.values):
             # If the input is a valid id, get the status name from the
@@ -101,6 +106,7 @@ class Status():
         # i.e. it is defined to have a 30-char name, but dtype='<U24'
         # limits it to 24 chars. Therefore, if then we do
         #
+        # >>> my_status += Status('freeze')
         # >>> my_status.name
         #
         # We will only get array(['freeze', '123456789012345678901234'],
@@ -175,23 +181,20 @@ class Status():
 
             self.duration[nvol_pos] = other.duration[0]
             self.id[nvol_pos] = other.id[0]
-            self.name = other.name[0]
-            self.volatile = other.volatile[0]
+            self.name[nvol_pos] = other.name[0]
+            self.volatile[nvol_pos] = other.volatile[0]
 
         return self
 
     def __bool__(self):
         """Returns True if 0 is not in the status id's.
 
+        Usage
+        -----
             >>> 'bad' if some_pokemon.status else 'good'
-        """
-        return True if 0 not in self.id else False
-
-    def reduce(self):
-        """Subtract 1 from all durations.
 
         """
-        self.duration -= 1
+        return True if 0 not in self.id and len(self.id) == 1 else False
 
     def remove(self, which_status):
         """Remove the given status. `which_status` can be a valid status
@@ -210,10 +213,20 @@ class Status():
             print('Warning: Status({}) is not in the list. '
                   'Nothing is removed.'.format(which_status))
 
-        self.duration = self.duration[mask]
         self.id = self.id[mask]
         self.name = self.name[mask]
+        self.duration = self.duration[mask]
         self.volatile = self.volatile[mask]
+
+    def reduce(self):
+        """Subtract 1 from all durations."""
+        self.duration -= 1
+        if 0 in self.duration:
+            mask = self.duration != 0
+            self.name = self.name[mask]
+            self.id = self.id[mask]
+            self.volatile = self.volatile[mask]
+            self.duration = self.duration[mask]
 
 
 def test():
@@ -225,16 +238,20 @@ def test():
     combined += burn
     nightmare = Status(9, 5)
     new_combined = poison + nightmare + combined
-    new_combined.cut()
-    new_combined.cut()
+    new_combined.reduce()
+    new_combined.reduce()
 
-    res = [new_combined.name, new_combined.id, new_combined.duration]
+    res = [new_combined.name, new_combined.id, new_combined.duration,
+           new_combined.volatile]
 
     for i in res:
         print(i)
 
     print(0 in Status(0))
     print('poison' in new_combined)
+    new_combined.remove(4)
+    print(new_combined.duration)
+    print([3 if new_combined else 5])
 
 
-test()
+# test()
