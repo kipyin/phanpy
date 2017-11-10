@@ -284,8 +284,9 @@ class Pokemon():
         # --------------------- Miscellaneous ------------------------ #
 
         # Any miscellaneous flag and its duration a Pokémon might have,
-        # such as {'flinch': 1.}. The duration can be float('inf').
-        self.flags = Status()
+        # such as {'stockpile': 1.}, where the meaning of the value(s)
+        # depends on the flag.
+        self.flags = defaultdict()
 
         # Should items have their own class? Probably not?
         self.item = Item(0)
