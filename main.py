@@ -57,17 +57,6 @@ def order_of_attack(p1, p1_move, p2, p2_move):
     return f1, m1, f2, m2
 
 
-def can_select_a_move(f, m):
-    """If the Pokémon is able to **select** a move, return True.
-    """
-    if 'recharge' in f.status:
-        # `f` cannot make a move after using a move requiring
-        # recharging.
-        return False
-    else:
-        return True
-
-
 def is_mobile(f, m):
     """If the Pokémon is able to **use** a selected move, return True.
 
@@ -86,16 +75,21 @@ def is_mobile(f, m):
 
     statuses = f.status
 
-    if f.order == 2 and 'flinch' in statuses:
+    if 'recharge' in f.status:
+        # `f` cannot make a move after using a move requiring
+        # recharging.
+        return False
+
+    elif f.order == 2 and 'flinch' in statuses:
         # A Pokémon can only flinch if it is hit by another Pokémon's
         # move before using its move.
         return False
 
     elif 'paralysis' in statuses:
-        return bool(binomial(1., 0.75))  # 75% chance not to be paralyzed
+        return bool(binomial(1., 0.75))  # 75% chance not to be paralyzed.
 
     elif 'infatuation' in statuses:
-        return bool(binomial(1., 0.5))
+        return bool(binomial(1., 0.5))  # 50% chance so it doesn't matter.
 
     elif (('sleep' in statuses) and
           (m.name not in ['sleep-talk', 'snore'])):
@@ -160,7 +154,7 @@ def makes_hit(f1, m1, f2):
     if np.isnan(m1.accuracy):
         # I haven't found any cases where the accuracy is nan and still
         # has a chance to miss.
-        # XXX: an exhaustive check on this.
+        # XXX do an exhaustive check on this.
         return 1
 
     else:
@@ -624,11 +618,6 @@ def regular_damage(f1, m1, f2, m2):
         return base_damage
 
 
-def charge(f1, m1, f2, m2):
-    """Calculates the damage for all moves require charging."""
-    pass
-
-
 def direct_damage(f1, m1, f2, m2):
     """Calculates the damage for moves deal direct damage.
     """
@@ -860,15 +849,15 @@ def attack(f1, m1, f2, m2):
             if not np.isnan(m1.drain):
                 # A negative drain means a recoil damage.
                 # A positive drain means absoring from the opponent.
-                f1.current.hp += m1.drain/100. * damage
-
+                f1.current.hp += m1.drain * damage // 100.
         else:
+            # Append 0 if no damage is dealt.
             f2.history.damage.appendleft(0)
 
-        if not np.isnan(m1.heal):
+        if not np.isnan(m1.healing):
             # A positive heal cures the user; a negative heal damages
             # the user, based on the user's max hp.
-            f1.current.hp += m1.heal/100. * f1.stats.hp
+            f1.current.hp += m1.healing * f1.stats.hp // 100.
 
         if not np.isnan(m1.flinch_chance):
             # If the move makes the opponent flinch, then add `flinch`
@@ -888,7 +877,7 @@ def attack(f1, m1, f2, m2):
         pass
 
 
-def battle(player=None, ai=None, display=True):
+def debug(player=None, ai=None, display=True):
     """A quick prototype that simulates a battle. `player` and `ai` are
     both Trainer objects.
     Set `display` to False shut all display up.
@@ -923,28 +912,22 @@ def battle(player=None, ai=None, display=True):
 
         for (f, m, g, n) in zip([f1, f2], [m1, m2], [f2, f1], [m2, m1]):
 
-            if can_select_a_move(f, m):
-                if is_mobile(f, m):
-                    if display:
-                        print("{} uses {}!\n".format(f.name, m.name))
-                        print("The move {}'s info:\n"
-                              "Power: {}, Accuracy: {}\n".format(m.name,
-                                                                 m.power,
-                                                                 m.accuracy))
-                    attack(f, m, g, n)
-
-                    # print(g.history)
-                    if display:
-                        print("{}'s hp: {}\n"
-                              "{}'s hp: {}\n".format(f.name, f.current.hp,
-                                                     g.name, g.current.hp))
-                elif display:
-                    print("{} cannot use the move!\n".format(f.name))
-                    continue
-
-            else:
+            if is_mobile(f, m):
                 if display:
-                    print('{} cannot move!\n'.format(f.name))
+                    print("{} uses {}!\n".format(f.name, m.name))
+                    print("The move {}'s info:\n"
+                          "Power: {}, Accuracy: {}\n".format(m.name,
+                                                             m.power,
+                                                             m.accuracy))
+                attack(f, m, g, n)
+
+                # print(g.history)
+                if display:
+                    print("{}'s hp: {}\n"
+                          "{}'s hp: {}\n".format(f.name, f.current.hp,
+                                                 g.name, g.current.hp))
+            elif display:
+                print("{} cannot use the move!\n".format(f.name))
                 continue
 
             if f2.current.hp <= 0 or f1.current.hp <= 0:
@@ -958,9 +941,9 @@ def battle(player=None, ai=None, display=True):
         turn += 1
 
 
-def test():
-    for i in range(10):
-        battle(display=False)
+def test(n, display=False):
+    for i in range(n):
+        debug(display=display)
 
 
-test()
+test(1, True)
