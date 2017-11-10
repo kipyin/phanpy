@@ -618,13 +618,14 @@ def regular_damage(f1, m1, f2, m2):
         return base_damage
 
 
-def direct_damage(f1, m1, f2, m2):
-    """Calculates the damage for moves deal direct damage.
+def calculate_damage(f1, m1, f2, m2):
+    """Calculates the damage including the moves dealing direct damages
+    and regular damages.
     """
     effect = m1.effect_id
 
     def immuned(damage):
-        """A simple filter for damage that takes typ-immunity into
+        """A simple filter for damage that takes type-immunity into
         account.
         """
         return 0 if efficacy(m1.type, f2.types) == 0 else damage
@@ -669,7 +670,7 @@ def direct_damage(f1, m1, f2, m2):
 
         if f1.order == 2:
             received_damage = f1.history.damage[0]
-            if received_damage.any() and m2.damage_class_id == 2:
+            if m2.damage_class_id == 2:
                 return immuned(received_damage * 2)
 
         return 0
@@ -728,7 +729,7 @@ def direct_damage(f1, m1, f2, m2):
 
         if f1.order == 2:
             received_damage = f1.history.damage[0]
-            if (received_damage.any() and m2.damage_class_id != 1):
+            if m2.damage_class_id != 1:
                 return immuned(received_damage * 1.5)
 
         return 0.
@@ -747,9 +748,22 @@ def direct_damage(f1, m1, f2, m2):
         return regular_damage(f1, m1, f2, m2)
 
 
+def unique_effect(f1, m1, f2, m2):
+    """Activates m1's effect if it is a unique effect.
+
+    Exceptions
+    ----------
+        Move id     | Effect id
+            18      |   29
+
+    """
+    pass
+
+
 def stat_changer(f1, m1, f2, m2):
-    """Activates m1's effects. The target is dependent upon m1's
-    target_id.
+    """Activates m1's effects if it is **stat-change related**.
+
+    The target is dependent upon m1's ``target_id``.
     """
 
     effect = m1.effect_id
@@ -771,8 +785,6 @@ def stat_changer(f1, m1, f2, m2):
                     if i + 1 not in [7, 8] and change > 0:
                         # exclude accuracy and evasion.
                         p.history.stage += change
-                        print("\n++++++++ {}' stat {} is increased "
-                              "by {}.++++++++ \n".format(p.name, i+1, change))
 
     if effect == 340:  # also effect 351
         # Raises the Attack and Special Attack of all []{type:grass}
@@ -816,6 +828,19 @@ def inflict_ailment(f1, m1, f2, m2):
             f2.status += ailment
 
 
+def ailment_damage(f1, m1):
+    """Takes the damage if the pokemon has certain statuses. The damage
+    is effect **at the end of the turn**.
+
+    """
+    if 'burn' in f1.status and f1.ability != 'guts':
+        f1.current.hp -= f1.stats.hp // 8.
+
+    if {'poison', 'leech-seed'} & set(f1.status):
+
+        f1.current.hp -= f1.stats.hp // 8.
+
+
 # Order, move, and item should be recorded before calling this function.
 def attack(f1, m1, f2, m2):
     """f1 uses m1 to attack f2.
@@ -838,8 +863,15 @@ def attack(f1, m1, f2, m2):
             # `direct_damage` checks if a move deals direct damage,
             # and if not, then returns the regular damage.
 
-            damage = np.floor(direct_damage(f1, m1, f2, m2))
+            damage = np.floor(calculate_damage(f1, m1, f2, m2))
+
             # print("{} dealt {} to {}!\n".format(f1.name, damage, f2.name))
+
+            if 'burn' in f1.status and m1.damage_class_id == 2:
+                # if the attacker is burned and the move is a physical
+                # move, the damage is halved.
+                damage *= 0.5
+
             f2.current.hp -= damage
             f2.history.damage.appendleft(damage)
 
@@ -882,10 +914,13 @@ def debug(player=None, ai=None, display=True):
     both Trainer objects.
     Set `display` to False shut all display up.
     """
+
     from mechanisms.core.pokemon import Trainer
+
     if not ai:
         # If the ai's pokemon is not specified, then randomize one
         ai = Trainer('Shigeru')
+
     if not player:
         player = Trainer('Satoshi')
 
@@ -898,7 +933,7 @@ def debug(player=None, ai=None, display=True):
                   "{}'s hp: {}\n".format(p.name, p.stats.hp))
 
     end = False
-    global turn
+
     turn = 1
 
     while not end:
@@ -920,7 +955,7 @@ def debug(player=None, ai=None, display=True):
                                                              m.power,
                                                              m.accuracy))
                 attack(f, m, g, n)
-
+                ailment_damage(f, m)
                 # print(g.history)
                 if display:
                     print("{}'s hp: {}\n"
@@ -941,9 +976,9 @@ def debug(player=None, ai=None, display=True):
         turn += 1
 
 
-def test(n, display=False):
+def test(n, d=True):
     for i in range(n):
-        debug(display=display)
+        debug(display=d)
 
 
-test(1, True)
+test(10, False)
