@@ -66,7 +66,7 @@ class Move():
         self.id = moves.loc[label, "id"].values[0]
         self.identifier = moves.loc[label, "identifier"].values[0]
         self.generation_id = moves.loc[label, "generation_id"].values[0]
-        self.type_id = moves.loc[label, "type_id"].values[0]
+        self.type = moves.loc[label, "type_id"].values[0]
         self.power = moves.loc[label, "power"].values[0]
         self.pp = moves.loc[label, "pp"].values[0]
         self.accuracy = moves.loc[label, "accuracy"].values[0]

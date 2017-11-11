@@ -10,19 +10,19 @@ root_path = file_path.replace('/mechanisms', '')
 sys.path.append(root_path) if root_path not in sys.path else None
 '''
 
+from collections import deque
 from functools import reduce
 
 import numpy as np
-from numpy.random import binomial, uniform, randint
+from numpy.random import binomial, uniform, randint, choice
 
-from mechanisms.config import turn
 from mechanisms.core.helpers import efficacy
 from mechanisms.data.tables import move_natural_gift
 
 # XXX: consider merging all classes into one file.
 from mechanisms.core.item import Item
 from mechanisms.core.status import Status
-
+import mechanisms.data.tables as tb
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -59,18 +59,7 @@ def order_of_attack(p1, p1_move, p2, p2_move):
     return f1, m1, f2, m2
 
 
-def can_select_a_move(f, m):
-    """If the Pokémon is able to **select** a move, return True.
-    """
-    if 'recharge' in f.status:
-        # `f` cannot make a move after using a move requiring
-        # recharging.
-        return False
-    else:
-        return True
-
-
-def can_use_the_selected_move(f, m):
+def is_mobile(f, m):
     """If the Pokémon is able to **use** a selected move, return True.
 
     Not be able to move if suffer from:
@@ -82,22 +71,27 @@ def can_use_the_selected_move(f, m):
         {status: infatuation} (w.p. 0.5),
         {status: semi-invulnerable} (need to be added to
             `move_meta_ailments.csv`),
-        {status: taking-in-sunlight} (need to be added),
+        {status: taking-in-sunlight} (need to be added) <- charge,
         {status: withdrawing} (need to be added).
     """
 
     statuses = f.status
 
-    if f.order == 2 and 'flinch' in statuses:
+    if 'recharge' in f.status:
+        # `f` cannot make a move after using a move requiring
+        # recharging.
+        return False
+
+    elif f.order == 2 and 'flinch' in statuses:
         # A Pokémon can only flinch if it is hit by another Pokémon's
         # move before using its move.
-        return True
+        return False
 
     elif 'paralysis' in statuses:
-        return bool(binomial(1., 0.25))
+        return bool(binomial(1., 0.75))  # 75% chance not to be paralyzed.
 
     elif 'infatuation' in statuses:
-        return bool(binomial(1., 0.5))
+        return bool(binomial(1., 0.5))  # 50% chance so it doesn't matter.
 
     elif (('sleep' in statuses) and
           (m.name not in ['sleep-talk', 'snore'])):
@@ -111,10 +105,23 @@ def can_use_the_selected_move(f, m):
         # flag.
         return False
 
+    elif 'confusion' in statuses:
+        # The confused condition causes a Pokémon to sometimes hurt
+        # itself in its confusion instead of executing a selected move.
+        # From Generation I to VI, the chance to hurt itself is 50%;
+        # in Generation VII, it is 33%. The damage is done as if the
+        # Pokémon attacked itself with a 40-power typeless physical
+        # attack (without the possibility of a critical hit).
+        if binomial(1, 0.5):
+            f1.current.hp -= 2 + (2 * (f1.level/5 + 1) * 40 * A/D) // 50
+            return False
+        else:
+            return True
+
     return True
 
 
-def the_move_hits_the_target(f1, m1, f2):
+def makes_hit(f1, m1, f2):
     """Returns 1 if a move is hit else 0."""
 
     if 'taking-aim' in f2.status:
@@ -125,7 +132,7 @@ def the_move_hits_the_target(f1, m1, f2):
         # 'lock-on'.
         return 1
 
-    elif f2.status.semi_invulnerable:
+    elif 'semi-invulnerable' in f2.status:
         # XXX: best way to do this? This works.
         # If the opponent is semi-invulnerable, i.e. if the opponent
         # used bounce, fly, sky-drop, dig, or dive. Unless the user's
@@ -162,7 +169,7 @@ def the_move_hits_the_target(f1, m1, f2):
     if np.isnan(m1.accuracy):
         # I haven't found any cases where the accuracy is nan and still
         # has a chance to miss.
-        # XXX: an exhaustive check on this.
+        # XXX do an exhaustive check on this.
         return 1
 
     else:
@@ -202,7 +209,7 @@ def stab(f1, m1):
     otherwise return 0, unless the user's ability is Adaptibility,
     in which case return 2.
     """
-    if m1.type_id in f1.types:
+    if m1.type in f1.types:
         return 2 if f1.ability == 91 else 1.5
 
     else:
@@ -228,7 +235,7 @@ def regular_damage(f1, m1, f2, m2):
     effect = m1.effect_id
 
     critical_modifier = critical(f1, m1)
-    type_modifier = efficacy(m1.type_id, f2.types)
+    type_modifier = efficacy(m1.type, f2.types)
     random_modifier = uniform(0.85, 1.)
     stab_modifier = stab(f1, m1)
     burn_modifier = burn(f1, m1)
@@ -399,7 +406,7 @@ def regular_damage(f1, m1, f2, m2):
         # {mechanic:fail}.
         # XXX: pass
 
-        if 'stockpile' in f1.flags.keys():
+        if 'stockpile' in f1.flags:
             energy = f1.flags.pop('stockpile')
             power = energy * 100.
             A = f1.flags.pop('defense_at_stockpile')
@@ -468,7 +475,7 @@ def regular_damage(f1, m1, f2, m2):
         if __cond.any():
             # If there is at least one match
             __subset = move_natural_gift[__cond]
-            m1.type_id = __subset["type_id"].values[0]
+            m1.type = __subset["type_id"].values[0]
 
             power = __subset["power"].values[0]
 
@@ -562,7 +569,7 @@ def regular_damage(f1, m1, f2, m2):
 
         if f1.order == 2 and m2.damage_class_id != 1:
             power = m2.power * 1.5
-            m1.type_id = m2.type_id
+            m1.type = m2.type
         else:
             power = 0
 
@@ -576,19 +583,7 @@ def regular_damage(f1, m1, f2, m2):
 
         # Counting **only** stat increases.
 
-        stats_in_interest = ['attack', 'defense', 'specialAttack',
-                             'specialDefense', 'speed']
-
-        __e_s = f1.trainer.events.opponent.stats.loc[:, stats_in_interest]
-        __e_s = __e_s[__e_s > 0]
-
-        __e_o = f2.trainer.events.self.stats.loc[:, stats_in_interest]
-        __e_o = __e_o[__e_o > 0]
-
-        total_increase = (__e_s.sum().sum()
-                          + __e_o.sum().sum())
-
-        power = np.clip(a=total_increase * 20 + 60,
+        power = np.clip(a=f2.history.stage * 20 + 60,
                         a_max=200,
                         a_min=0)
 
@@ -632,27 +627,23 @@ def regular_damage(f1, m1, f2, m2):
         # If the move hits multiple times.
         # XXX: in the actual game, the critical modifier is determined
         # every time the move makes a hit.
-        return base_damage * np.random.choice(np.arange(m1.min_hits,
-                                                        m1.max_hits+1))
+        return base_damage * choice(np.arange(m1.min_hits,
+                                              m1.max_hits+1))
     else:
         return base_damage
 
 
-def charge(f1, m1, f2, m2):
-    """Calculates the damage for all moves require charging."""
-    pass
-
-
-def direct_damage(f1, m1, f2, m2):
-    """Calculates the damage for moves deal direct damage.
+def calculate_damage(f1, m1, f2, m2):
+    """Calculates the damage including the moves dealing direct damages
+    and regular damages.
     """
     effect = m1.effect_id
 
     def immuned(damage):
-        """A simple filter for damage that takes typ-immunity into
+        """A simple filter for damage that takes type-immunity into
         account.
         """
-        return 0 if efficacy(m1.type_id, f2.types) == 0 else damage
+        return 0 if efficacy(m1.type, f2.types) == 0 else damage
 
     if effect == 27:
         # User waits for two turns.
@@ -662,7 +653,8 @@ def direct_damage(f1, m1, f2, m2):
         #
         # This move cannot be selected by []{move:sleep-talk}.
         # XXX: group moves with `charge` flag into a new function.
-        return 100
+        f1.flags += Status('bide', 2)
+        return 0
 
     elif effect == 41:
         # Inflicts [typeless]{mechanic:typeless} damage equal to half
@@ -682,7 +674,7 @@ def direct_damage(f1, m1, f2, m2):
         # Inflicts [typeless]{mechanic:typeless} damage between 50% and
         # 150% of the user's level, selected at random in increments of
         # 10%.
-        return f1.level * np.random.randint(5, 15)/10.
+        return f1.level * randint(5, 15)/10.
 
     elif effect == 90:
         # Targets the last opposing Pokémon to hit the user with a
@@ -692,11 +684,11 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
-            if received_damage.any() and m2.damage_class_id == 2:
+            received_damage = f1.history.damage[0]
+            if m2.damage_class_id == 2:
                 return immuned(received_damage * 2)
-        else:
-            return 0
+
+        return 0
 
     elif effect == 131:
         # Inflicts exactly 20 damage.
@@ -711,11 +703,11 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
-            if received_damage.any() and m2.damage_class_id == 3:
+            received_damage = f1.history.damage[0]
+            if received_damage and m2.damage_class_id == 3:
                 return immuned(received_damage * 2)
-        else:
-            return 0
+
+        return 0
 
     elif effect == 155:
         # Inflicts {mechanic:typeless} {mechanic:regular-damage}.
@@ -751,11 +743,11 @@ def direct_damage(f1, m1, f2, m2):
         # Type immunity applies, but other type effects are ignored.
 
         if f1.order == 2:
-            received_damage = f2.trainer.events.opponent.damage.loc[turn, ].values
-            if (received_damage.any() and m2.damage_class_id != 1):
+            received_damage = f1.history.damage[0]
+            if m2.damage_class_id != 1:
                 return immuned(received_damage * 1.5)
-        else:
-            return 0.
+
+        return 0.
 
     elif effect == 321:
         # Inflicts damage equal to the user's remaining
@@ -763,7 +755,6 @@ def direct_damage(f1, m1, f2, m2):
 
         damage = f1.current.hp
         f1.current.hp = 0
-        f1.trainer.events.self.damage[turn] = f1.current.hp
 
         return damage
 
@@ -772,9 +763,10 @@ def direct_damage(f1, m1, f2, m2):
         return regular_damage(f1, m1, f2, m2)
 
 
-def change_stats(f1, m1, f2, m2):
-    """Activates m1's effects. The target is dependent upon m1's
-    target_id.
+def stat_changer(f1, m1, f2, m2):
+    """Activates m1's effects if it is **stat-change related**.
+
+    The target is dependent upon m1's ``target_id``.
     """
 
     effect = m1.effect_id
@@ -783,33 +775,28 @@ def change_stats(f1, m1, f2, m2):
         """Changes p's stats."""
         chance = m1.effect_chance
 
-        if p == f1:
-            # If p is the user, record the stat changes to the user's
-            # event log.
-            events = f1.trainer.events.self.stats
-        else:
-            # If p is the opponent, record the stat changes to the
-            # opponent's event log.
-            events = f1.trainer.events.opponent.stats
-
         if np.isnan(chance):
             chance = 100.
 
         if binomial(1, chance/100.):
             for i, name in enumerate(p.CURRENT_STAT_NAMES):
                 if i + 1 in m1.stat_change.stat_id:
-                    p.stage[name] += m1.stat_change.change[i+1]
-                    events.loc[turn, name] += m1.stat_change.change[i+1]
+
+                    change = m1.stat_change.change[i+1]
+                    p.stage[name] += change
+
+                    if i + 1 not in [7, 8] and change > 0:
+                        # exclude accuracy and evasion.
+                        p.history.stage += change
 
     if effect == 340:  # also effect 351
         # Raises the Attack and Special Attack of all []{type:grass}
         # Pokémon in battle.
         if 12 in f1.types:
-            f1.stage.attack += 1
-            f1.stage.specialAttack += 1
+            whose_stat(f1)
+
         if 12 in f2.types:
-            f2.stage.attack += 1
-            f2.stage.specialAttack += 1
+            whose_stat(f2)
 
     if m1.target_id in [3, 7, 13]:
         # Stats changes to the user.
@@ -829,25 +816,174 @@ def inflict_ailment(f1, m1, f2, m2):
                                                                 m1.max_turns+1)
     ailment = Status(ailment_id, lasting_turns)
 
-    events_self = f1.trainer.events.self.status
-    events_opponent = f1.trainer.events.opponent.status
-
     if binomial(1, ailment_chance/100.):
         if m1.target_id == 7:
             # Self-inflicted ailment
             f1.status += ailment
-            events_self.loc[turn, ] = ailment.name
+
         elif m1.target_id == 14:
             # ailment inflicted to all pokemons.
             f1.status += ailment
             f2.status += ailment
-            events_self.loc[turn, ] = ailment.name
-            events_opponent.loc[turn, ] = ailment.name
+
         else:
             # ailment inflicted to the opponent
             f2.status += ailment
-            events_opponent.loc[turn, ] = ailment.name
-        print(f1.status, f2.status)
+
+
+def ailment_damage(f1, m1, f2, m2):  # 'post-attack' damage
+    """Takes the damage if the pokemon has certain statuses. The damage
+    is effect **at the end of the turn**.
+
+    """
+    if 'burn' in f1.status and f1.ability != 'guts':
+        f1.current.hp -= f1.stats.hp // 8.
+
+    if {'poison', 'leech-seed'} & set(f1.status):
+
+        f1.current.hp -= f1.stats.hp // 8.
+
+    if {'ingrain', 'aqua-ring'} & set(f1.status):
+
+        recovery = f1.stats.hp // 16.
+
+        if f1.item.name == 'big-root':
+            recovery = np.floor(1.3 * recovery)
+
+        f1.current.hp += recovery
+
+    if {'nightmare', 'sleep'} <= set(f1.status) or 'curse' in f1.status:
+
+        f1.current.hp -= f1.stats.hp // 4.
+
+    if 'trap' in f1.status:
+
+        damage = f1.stats.hp // 16.
+
+        if f2.item.name == 'binding-band':
+            damage *= 2.
+
+        f1.current.hp -= damage
+
+
+def mid_attack_effect(f1, m1, f2, m2):
+    """Activates m1's effect if it is a unique effect.
+
+    Exceptions
+    ----------
+        Move id     | Effect id
+       -------------|-----------
+         18, 46     |   29
+         54         |   47
+         100        |   154
+         102        |   83
+         113        |   36
+
+
+    """
+
+    effect = m1.effect_id
+    if not np.isnan(m1.healing):
+        # A positive heal cures the user; a negative heal damages
+        # the user, based on the user's max hp.
+        f1.current.hp += m1.healing * f1.stats.hp // 100.
+
+    if not np.isnan(m1.flinch_chance) and f2.order == 2:  # oxymoron?
+        # If the move makes the opponent flinch, then add `flinch`
+        # to the opponent's status.
+        if binomial(1, m1.flinch_chance/100.):
+            f2.status += Status('flinch', 1)
+
+    if not str(m1.stat_change).isnumeric():
+        # stat-changers
+        stat_changer(f1, m1, f2, m2)
+
+    if m1.meta_category_id in[1, 5]:
+        # moves that inflicts status conditions.
+        inflict_ailment(f1, m1, f2, m2)
+
+    if effect == 26:
+        # Removes [stat]{mechanic:stat}, [accuracy]{mechanic:accuracy},
+        # and [evasion]{mechanic:evasion} modifiers from every Pokémon
+        # on the [field]{mechanic:field}.
+        #
+        # This does not count as a stat reduction for the purposes of
+        # []{ability:clear-body} or []{ability:white-smoke}.
+        for f in [f1, f2]:
+            for stat in f.STAT_NAMES:
+                f.current[stat] = f.stats[stat]
+            for stat in ['accuracy', 'evasion']:
+                f.current[stat] = 100.
+
+    elif effect == 58:
+        # User copies the target's species, weight, type,
+        # [ability]{mechanic:ability}, [calculated stats]{mechanic:
+        # calculated-stats} (except [HP]{mechanic:hp}), and moves.
+        # Copied moves will all have 5 [PP]{mechanic:pp} remaining.
+        # [IV]{mechanic:iv}s are copied for the purposes of []{move:
+        # hidden-power}, but stats are not recalculated.
+        #
+        # []{item:choice-band}, []{item:choice-scarf}, and []{item:
+        # choice-specs} stay in effect, and the user must select a new
+        # move.
+        #
+        # This move cannot be copied by []{move:mirror-move}, nor forced
+        # by []{move:encore}.
+        pass
+
+    elif effect == 83:
+        # This move is replaced by the target's last successfully used
+        # move, and its PP changes to 5.  If the target hasn't used a
+        # move since entering the field, if it tried to use a move this
+        # turn and [failed]{mechanic:fail}, or if the user already knows
+        # the targeted move, this move will fail.  This effect vanishes
+        # when the user leaves the field.
+        #
+        # If []{move:chatter}, []{move:metronome}, []{move:mimic},
+        # []{move:sketch}, or []{move:struggle} is selected, this move
+        # will [fail]{mechanic:fail}.
+        #
+        # This move cannot be copied by []{move:mirror-move}, nor
+        # selected by []{move:assist} or []{move:metronome}, nor forced
+        # by []{move:encore}.
+        if 'last-successfully-used-move' in f2.flags:
+            m1 = Move(f2.flags['last-successfully-used-move'])
+            m1.pp = 5
+
+    elif effect == 84:
+        # Selects any move at random and uses it.
+        # Moves the user already knows are not eligible.
+        # Assist, meta, protection, and reflection moves are also not
+        # eligible; specifically, []{move:assist}, []{move:chatter},
+        # []{move:copycat}, []{move:counter}, []{move:covet},
+        # []{move:destiny-bond}, []{move:detect}, []{move:endure},
+        # []{move:feint}, []{move:focus-punch}, []{move:follow-me},
+        # []{move:helping-hand}, []{move:me-first}, []{move:metronome},
+        # []]{move:mimic}, []{move:mirror-coat}, []{move:mirror-move},
+        # []{move:protect}, []{move:quick-guard}, []{move:sketch},
+        # []{move:sleep-talk}, []{move:snatch}, []{move:struggle},
+        # []{move:switcheroo}, []{move:thief}, []{move:trick}, and
+        # []{move:wide-guard} will not be selected by this move.
+        #
+        # This move cannot be copied by []{move:mimic} or
+        # []{move:mirror-move}, nor selected by []{move:assist},
+        # []{move:metronome}, or []{move:sleep-talk}.
+
+        ineligible_moves = deque([x.name for x in f1.moves])
+        ineligible_moves.extend(['assist', 'chatter', 'copycat', 'counter',
+                                 'covet', 'destiny-bond', 'detect', 'endure',
+                                 'feint', 'focus-punch', 'follow-me',
+                                 'helping-hand', 'me-first', 'metronome',
+                                 'mimic', 'mirror-coat', 'mirror-move',
+                                 'protect', 'quick-guard', 'sketch',
+                                 'sleep-talk', 'snatch', 'struggle',
+                                 'switcheroo', 'thief', 'trick', 'wide-guard'])
+
+        all_moves = deque([x for x in tb.moves.identifier.values])
+        eligible_moves = list(set(all_moves) - set(ineligible_moves))
+        m1 = np.random.choice(eligible_moves)
+
+    elif effect ==
 
 
 # Order, move, and item should be recorded before calling this function.
@@ -863,47 +999,58 @@ def attack(f1, m1, f2, m2):
         direct damage
         other damage
     """
-    global turn
-    events = f1.trainer.events
-    if the_move_hits_the_target(f1, m1, f2):
+
+    if makes_hit(f1, m1, f2):
         # Determine if the move is hit or not.
 
+        f1.flags['last-successfully-used-move'] = m1.id
         if m1.damage_class_id in [2, 3]:
             # For all moves that deal damage.
             # `direct_damage` checks if a move deals direct damage,
             # and if not, then returns the regular damage.
 
-            damage = np.floor(direct_damage(f1, m1, f2, m2))
+            damage = np.floor(calculate_damage(f1, m1, f2, m2))
+
             # print("{} dealt {} to {}!\n".format(f1.name, damage, f2.name))
+
+            if 'burn' in f1.status and m1.damage_class_id == 2:
+                # if the attacker is burned and the move is a physical
+                # move, the damage is halved.
+                damage *= 0.5
+
             f2.current.hp -= damage
+            f2.history.damage.appendleft(damage)
 
             # if this number is negative, then the move heals the
             # opponent.
 
-            events.opponent.damage.loc[turn, ] = damage
+            if not np.isnan(m1.drain):
+                # A negative drain means a recoil damage.
+                # A positive drain means absoring from the opponent.
+                f1.current.hp += m1.drain * damage // 100.
+        else:
+            # Append 0 if no damage is dealt.
+            f2.history.damage.appendleft(0)
 
-        if not str(m1.stat_change).isnumeric():
-            # stat-changers
-            change_stats(f1, m1, f2, m2)
+        mid_attack_effect(f1, m1, f2, m2)
 
-        if m1.meta_category_id in[1, 5]:
-            # moves that inflicts status conditions.
-            inflict_ailment(f1, m1, f2, m2)
-        # print(f1.trainer.events.loc[turn, :])
-        # XXX: not event is being recorded! WHY!
+        m1.pp -= 1
     else:
         pass
 
 
-def battle(player=None, ai=None, display=True):
+def debug(player=None, ai=None, display=True):
     """A quick prototype that simulates a battle. `player` and `ai` are
     both Trainer objects.
     Set `display` to False shut all display up.
     """
+
     from mechanisms.core.pokemon import Trainer
+
     if not ai:
         # If the ai's pokemon is not specified, then randomize one
         ai = Trainer('Shigeru')
+
     if not player:
         player = Trainer('Satoshi')
 
@@ -916,7 +1063,7 @@ def battle(player=None, ai=None, display=True):
                   "{}'s hp: {}\n".format(p.name, p.stats.hp))
 
     end = False
-    global turn
+
     turn = 1
 
     while not end:
@@ -927,34 +1074,25 @@ def battle(player=None, ai=None, display=True):
 
         if display:
             print("==============================")
-            for (p, m) in zip([p1, p2], [m1, m2]):
-                print("{} uses {}!\n".format(p.name, m.name))
-                print("The move {}'s info:\n"
-                      "Power: {}, Accuracy: {}\n".format(m.name,
-                                                         m.power,
-                                                         m.accuracy))
-            print("{} attacks first!\n".format(f1.name))
 
         for (f, m, g, n) in zip([f1, f2], [m1, m2], [f2, f1], [m2, m1]):
 
-            if can_select_a_move(f, m):
-                if can_use_the_selected_move(f, m):
-                    if the_move_hits_the_target(f, m, g):
-                        # this is ugly
-                        attack(f, m, g, n)
-                        if display:
-                            print("{}'s hp: {}\n"
-                                  "{}'s hp: {}\n".format(f.name, f.current.hp,
-                                                         g.name, g.current.hp))
-                    elif display:
-                        print("{} missed the attack!\n".format(f.name))
-                elif display:
-                    print("{} cannot use the move!\n".format(f.name))
-                    continue
-
-            else:
+            if is_mobile(f, m):
                 if display:
-                    print('{} cannot move!\n'.format(f.name))
+                    print("{} uses {}!\n".format(f.name, m.name))
+                    print("The move {}'s info:\n"
+                          "Power: {}, Accuracy: {}\n".format(m.name,
+                                                             m.power,
+                                                             m.accuracy))
+                attack(f, m, g, n)
+                ailment_damage(f, m)
+                # print(g.history)
+                if display:
+                    print("{}'s hp: {}\n"
+                          "{}'s hp: {}\n".format(f.name, f.current.hp,
+                                                 g.name, g.current.hp))
+            elif display:
+                print("{} cannot use the move!\n".format(f.name))
                 continue
 
             if f2.current.hp <= 0 or f1.current.hp <= 0:
@@ -965,12 +1103,14 @@ def battle(player=None, ai=None, display=True):
                 end = True
                 break
 
+        f1.status.reduce()
+        f1.status.reduce()
         turn += 1
 
-    if player.events.opponent.status.any().any():
-        print("YES")
+
+def test(n, d=True):
+    for i in range(n):
+        debug(display=d)
 
 
-for i in range(50):
-    print('{}...'.format(i))
-    battle(display=True)
+test(10, False)

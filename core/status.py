@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sat Nov  4 04:22:57 2017
@@ -21,42 +22,34 @@ class Status():
 
     The csv files call it an 'ailment'.
 
-    A `non-volatile` status is one of the following: paralysis, sleep,
+    A ``non-volatile`` status is one of the following: paralysis, sleep,
     freeze, burn, and poison, with some sub-categories under each if
     they exist. Non-volatile statuses cannot stack; one Pokémon can
     only have one non-volatile status each time.
 
-    A `volatile` status is the one that does not exist out side of a
-    battle.Some classic examples would be confusion, ingrain,
-    infatuation, etc. Onecan have multiple volatile statuses.
+    A ``volatile`` status is the one that does not exist out side of a
+    battle. Some classic examples would be confusion, ingrain,
+    infatuation, etc. One can have multiple volatile statuses.
 
     Usage
     -----
-        >>> turn = 1
         >>> poison = Status(5)
         >>> leech_seed = Status(18,5)
         >>> combined = poison + leech_seed
-        >>> combined.remaining_round
+        >>> combined.duration
         array([ inf,   5.])
-        >>> turn += 1
-        >>> another_combined = Status('burn') + combined
-        ...                    + Status('nightmare')
-        >>> another_combined.name
-        array(['burn', 'leech-seed', 'nightmare'],
-        dtype='<U10')
+
 
     Attributes
     ----------
         id : numpy.array of int
-            The `ailment_id` in `move_meta_ailments.csv`.
+            The ``ailment_id`` in ``move_meta_ailments.csv``. If no
+            match is found, then randomly generate a pseudo-id.
         name : numpy.array of str
             The name of the status(es).
         volatile : numpy.array of bool
             True for volatile statuses, and False for non-volatile
-            statuses (id in 1~5).
-        start, stop : np array of float
-            These are the timestamps of when the statuses have been
-            inflicted.
+            statuses (id in 0~5).
 
     Built-in Methods
     ----------------
@@ -70,16 +63,7 @@ class Status():
         https://bulbapedia.bulbagarden.net/wiki/Status_condition
     """
 
-    def __init__(self, status, lasting_time=None):
-
-        global turn
-
-        try:
-            # Check if `turn` is defined.
-            turn = turn
-
-        except NameError:
-            turn = 1
+    def __init__(self, status=None, duration=float('inf')):
 
         if status in list(ailments.id.values):
             # If the input is a valid id, get the status name from the
@@ -107,28 +91,6 @@ class Status():
         # Otherwise, it is a non-volatile type.
         __volatile = __status_id not in range(0, 6)
 
-        # Set the starting time to the current round number.
-        __start = turn
-
-        if __name in ['flying-up-high', 'undergound', 'underwater',
-                      'semi-invulnerable']:
-            # Add a semi_invulnerable flag to Status.
-            # A Pokémon is semi-invulnerable as long as one of the
-            # statuses is semi-invulnerable.
-            self.semi_invulnerable = True
-
-        else:
-
-            self.semi_invulnerable = False
-
-        if lasting_time:
-            # If lasting_time is defined, calculate the stopping time.
-            __stop = __start + lasting_time
-
-        else:
-            # Otherwise, the status never ends.
-            __stop = float('inf')
-
         self.id = np.array([__status_id], dtype='int64')
         # The dtype '<U24' means that it is a little-endian unicode
         # with a length of 24. In other words, it supports a maximum
@@ -141,6 +103,7 @@ class Status():
         # i.e. it is defined to have a 30-char name, but dtype='<U24'
         # limits it to 24 chars. Therefore, if then we do
         #
+        # >>> my_status += Status('freeze')
         # >>> my_status.name
         #
         # We will only get array(['freeze', '123456789012345678901234'],
@@ -149,43 +112,10 @@ class Status():
         # 'whipping-up-a-whirlwind' (23-chars).
         self.name = np.array([__name], dtype='<U24')
         self.volatile = np.array([__volatile], dtype='bool')
-        self.start = np.array([__start], dtype='float64')
-        self.stop = np.array([__stop], dtype='float64')
+        self.duration = np.array([duration], dtype='float64')
 
         # A counter for __next__
         self.__current = 0
-
-    @staticmethod
-    def current_round():
-        """Returns the current round num"""
-        return turn
-
-    @property
-    def remaining_round(self):
-        """Returns the remaining round num of the effect.
-
-        Note that this is an n-dim array.
-        """
-        return self.stop - self.current_round()
-
-    def __truncate(self, cond):
-        """Used in removing unwanted statuses."""
-
-        self.start = self.start[cond]
-        self.stop = self.stop[cond]
-        self.id = self.id[cond]
-        self.name = self.name[cond]
-        self.volatile = self.volatile[cond]
-
-    def update(self):
-        """Remove any status with 0 lifetime left."""
-        if 0 in self.remaining_round:
-
-            __stay = np.where(self.remaining_round != 0)
-            self.__truncate(__stay)
-
-    def __str__(self):
-        return ', '.join(self.name)
 
     def __repr__(self):
         return ', '.join(self.name)
@@ -198,8 +128,8 @@ class Status():
 
         Usage
         -----
-            >>> 'flinch' in Pokemon(123).status
-            False
+            >>> for status in Pokemon(123).status
+            ...     # do something
 
         """
         return self
@@ -213,75 +143,128 @@ class Status():
             self.__current += 1
             return list(self.name)[self.__current - 1]
 
+    def __contains__(self, item):
+        """
+            >>> 'flinch' in Pokemon(123).status
+            >>> 5 in Pokemon(123).status
+
+        """
+        if type(item) is str:
+            return True if item in self.name else False
+
+        elif str(item).isnumeric():
+            return True if item in self.id else False
+
+        else:
+            return False
+
     def __add__(self, other):
         """Adds two statuses together.
-        Append volatile statuses; update non-volatile statuses.
+
+        Append volatile statuses; replace non-volatile statuses.
         """
-        self.update()
+        new = Status(0)
 
-        # Get the position of the non-volatile status in each `Status`.
-        # There should be *at most 1* `False` in each list.
-        if False in self.volatile and False in other.volatile:
+        new.duration = self.duration
+        new.name = self.name
+        new.id = self.id
+        new.volatile = self.volatile
 
-            __nvol_pos_self = np.where(~self.volatile)[0][0]
-            __nvol_pos_other = np.where(~other.volatile)[0][0]
-            __vol_pos_other = np.where(other.volatile)
-            __vol_pos_self = np.where(self.volatile)
+        if self.volatile.all() or other.volatile.all():
+            # As long as not both of them have a non-volatile status
+            # at the same time...(double negative, sorry).
+            new.duration = np.append(self.duration, other.duration)
+            new.id = np.append(self.id, other.id)
+            new.name = np.append(self.name, other.name)
+            new.volatile = np.append(self.volatile, other.volatile)
+        else:
+            # If both of them have a non-volatile status at the same
+            # time, replace `self`'s non-volatile status with that of
+            # `other`'s.
+            nvol_pos = np.where(~self.volatile)[0][0]
 
-            # For the non-vol status, if the starting round of `other`
-            # is greater than that of `self`, then replace `self` with
-            # `other`. Otherwise, nothing changes.
-            if self.start[__nvol_pos_self] <= other.start[__nvol_pos_other]:
+            new.duration[nvol_pos] = other.duration[0]
+            new.id[nvol_pos] = other.id[0]
+            new.name[nvol_pos] = other.name[0]
+            new.volatile[nvol_pos] = other.volatile[0]
 
-                self.start[__nvol_pos_self] = other.start[__nvol_pos_other]
-                self.id[__nvol_pos_self] = other.id[__nvol_pos_other]
-                self.name[__nvol_pos_self] = other.name[__nvol_pos_other]
-                self.stop[__nvol_pos_self] = other.stop[__nvol_pos_other]
-                other.__truncate(__vol_pos_other)
+        return new
 
-            else:
+    def __bool__(self):
+        """Returns True if 0 is not in the status id's.
 
-                other.start[__nvol_pos_other] = self.start[__nvol_pos_self]
-                other.id[__nvol_pos_other] = self.id[__nvol_pos_self]
-                other.name[__nvol_pos_other] = self.name[__nvol_pos_self]
-                other.stop[__nvol_pos_other] = self.stop[__nvol_pos_self]
+        Usage
+        -----
+            >>> 'bad' if some_pokemon.status else 'good'
 
-                self.__truncate(__vol_pos_self)
+        """
+        return True if 0 not in self.id and len(self.id) == 1 else False
 
-        self.id = np.append(self.id, other.id)
-        self.name = np.append(self.name, other.name)
-        self.start = np.append(self.start, other.start)
-        self.stop = np.append(self.stop, other.stop)
-        self.volatile = np.append(self.volatile, other.volatile)
-        self.semi_invulnerable = (self.semi_invulnerable or
-                                  other.semi_invulnerable)
+    def __eq__(self, other):
+        return set(self.name) == set(other.name)
 
-        self.update()
+    def __hash__(self):
+        """Returns the names as a set."""
+        return set(self.name)
 
-        return self
+    def remove(self, which_status):
+        """Remove the given status. `which_status` can be a valid status
+        id, or a valid status name. If no instances of `which_status` is
+        found, removes nothing.
 
-    def remove_volatile(self):
-        """Removes any volatile status."""
-        # TODO: finish this.
-        pass
+        """
+
+        if which_status in list(self.name):
+            # There should be at most 1 occurance.
+            mask = self.name != which_status
+        elif which_status in list(self.id):
+            mask = self.id != which_status
+        else:
+            mask = self.name == self.name
+            print('Warning: Status({}) is not in the list. '
+                  'Nothing is removed.'.format(which_status))
+
+        self.id = self.id[mask]
+        self.name = self.name[mask]
+        self.duration = self.duration[mask]
+        self.volatile = self.volatile[mask]
+
+    def reduce(self):
+        """Subtract 1 from all durations."""
+        self.duration -= 1
+        if 0 in self.duration:
+            mask = self.duration != 0
+            self.name = self.name[mask]
+            self.id = self.id[mask]
+            self.volatile = self.volatile[mask]
+            self.duration = self.duration[mask]
 
 
 def test():
 
-    global turn
-
     poison = Status(5)
     leech_seed = Status(18, 5)
     combined = leech_seed + poison
-    turn += 1
     burn = Status(4)
     combined += burn
-    turn += 1
     nightmare = Status(9, 5)
     new_combined = poison + nightmare + combined
+    new_combined.reduce()
+    new_combined.reduce()
 
-    res = [new_combined.name, new_combined.start, new_combined.id,
-           new_combined.remaining_round, new_combined.semi_invulnerable]
+    res = [new_combined.name, new_combined.id, new_combined.duration,
+           new_combined.volatile]
 
     for i in res:
         print(i)
+
+    print(0 in Status(0))
+    print('poison' in new_combined)
+    new_combined.remove(4)
+    print(new_combined.duration)
+    print([3 if new_combined else 5])
+    print([Status(x) for x in range(4)])
+    print(set(new_combined))
+
+
+# test()

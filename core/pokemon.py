@@ -7,7 +7,7 @@ Created on Sat Nov  4 15:56:47 2017
 """
 from collections import deque, defaultdict
 
-from pandas import Series, DataFrame
+from pandas import Series
 import numpy as np
 
 from mechanisms.core.item import Item
@@ -68,21 +68,20 @@ class Pokemon():
     def __init__(self, which_pokemon, level=50):
         # XXX: the try-except clause does nothing..?
 
-        try:
-            if str(which_pokemon).isnumeric():
-                # If `which_pokemon` is a number between 1 and 802
-                __condition = tb.pokemon['id'] == which_pokemon
+        if which_pokemon in list(tb.pokemon.id.values):
+            # If `which_pokemon` is a valid id.
+            __condition = tb.pokemon['id'] == which_pokemon
 
-            elif type(which_pokemon) is str:
-                # Else if `which_pokemon` is a valid Pokémon name
-                __condition = tb.pokemon['identifier'] == which_pokemon
+        elif which_pokemon in tb.pokemon.identifier.values:
+            # Else if `which_pokemon` is a valid Pokémon name
+            __condition = tb.pokemon['identifier'] == which_pokemon
 
-            # Set the id depending on the case.
-            pokemon_id = int(tb.pokemon[__condition].id)
+        else:
+            raise KeyError("`pokemon` has to be an integer"
+                           " or a pokemon's name.")
 
-        except TypeError:
-            raise TypeError("`pokemon` has to be an integer"
-                            " or a pokemon's name.")
+        # Set the id depending on the case.
+        pokemon_id = int(tb.pokemon[__condition].id)
 
         # Set the label corresponds to the given id in the DataFrame.
         LABEL = list(tb.pokemon[tb.pokemon["id"] == pokemon_id].index)[0]
@@ -91,7 +90,7 @@ class Pokemon():
 
         self.id = tb.pokemon.loc[LABEL, "id"]
         self.identifier = tb.pokemon.loc[LABEL, "identifier"]
-        self.species_id = tb.pokemon.loc[LABEL, "species_id"]
+        self.weight = tb.pokemon.loc[LABEL, 'weight']
 
         # -------- Initialization from `pokemon_species.csv` --------- #
 
@@ -124,15 +123,12 @@ class Pokemon():
         self.types = list(tb.pokemon_types[__condition]["type_id"])
 
         # Checks if `level` is valid.
-        try:
+        if level in np.arange(1, 101):
             self.level = level
 
-        except TypeError:
+        else:
             raise TypeError("`level` has to be an integer"
                             " or an integer string.")
-
-        if self.level not in range(1, 101):
-            raise ValueError("Level should be in range(1,101).")
 
         # ----------- BASE STAT, IV, & EV Initialization ------------- #
 
@@ -149,10 +145,22 @@ class Pokemon():
                     index=self.STAT_NAMES
                         )
 
-        # Set the actual EV the Pokémon has. Defaults to 0.
+        # Set the actual EV the Pokémon has.
         # Needed for stats calculation.
-        self.ev = Series(data=[0. for x in range(6)],
-                         index=self.STAT_NAMES)
+
+        # Insert marks to 5 randomly selected positions.
+        __marks = np.append([np.random.uniform(0, 1) for x in range(5)], 1.)
+
+        # Add endpoints.
+        __marks = np.append(0., __marks)
+
+        # Multiply __marks by 510, we get the cumulative EV of a pokemon.
+        __cumulative_ev = np.floor(np.sort(__marks) * 510.)
+
+        # Calculate the difference between consecutive elements
+        __ev = np.ediff1d(__cumulative_ev)
+
+        self.ev = Series(data=__ev, index=self.STAT_NAMES)
 
         # ------------------ NATURE Initialization ------------------- #
 
@@ -245,6 +253,13 @@ class Pokemon():
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
 
+        # Records the received damages. Has a memory of 5 turns.
+        # If its length is over 5, delete the oldest damage.
+        __received_damage = deque([], maxlen=5)
+
+        self.history = Series(data=np.array([__received_damage, 0]),
+                              index=["damage", "stage"])
+
         # ------------------ Moves Initialization -------------------- #
 
         # A Pokemon defaults to learn the last 4 learnable moves at its
@@ -254,14 +269,24 @@ class Pokemon():
                         (tb.pokemon_moves.level < self.level + 1))
 
         __all_moves = tb.pokemon_moves[___condition]["move_id"]
-        _default_moves = deque([Move(x) for x in __all_moves.values[-4:]])
+
+        num_of_moves = np.clip(a=4,
+                               a_max=len(__all_moves),
+                               a_min=1)
+
+        _default_moves = ([Move(x) for x in
+                          np.random.choice(__all_moves.values,
+                                           size=num_of_moves,
+                                           replace=False)])
 
         self.moves = _default_moves
 
         # --------------------- Miscellaneous ------------------------ #
 
-        # Any miscellaneous flags a Pokémon might have, such as
-        # 'critical-rate-changed'.
+        # Any miscellaneous flag and its duration a Pokémon might have,
+        # such as {'stockpile': 1.}, where the meaning of the value(s)
+        # depends on the flag.
+        # XXX Change the flags' type to ``namedtuple``?
         self.flags = defaultdict()
 
         # Should items have their own class? Probably not?
@@ -296,8 +321,7 @@ class Pokemon():
         If they have the same individual values and they have the
         same name, then they are considered to be the same pokemon.
         """
-        if ((self.iv.values == other.iv.values).all()
-                and self.trainer.id == other.trainer.id):
+        if (self.iv.values == other.iv.values).all():
             return True
         else:
             return False
@@ -319,7 +343,6 @@ class Pokemon():
 class Trainer():
     """Some awesome introductions.
     """
-    global turn
 
     def __init__(self, name=None, num_of_pokemon=3):
 
@@ -337,43 +360,6 @@ class Trainer():
             pokemon.trainer = self
 
         self._party = __party
-
-        # `event` property is a multi-indexed DataFrame, with 50
-        # predefined rows filled with 0's.
-        statnames = ['attack', 'defense', 'specialAttack', 'specialDefense',
-                     'speed', 'critical', 'accuracy', 'evasion']
-
-        # This dictionary will define the indices and values of `events`.
-        multiIndexDict = defaultdict(dict)
-
-        # 50 predefined rows, all have 0. in values.
-        # This is a single column in `events`.
-        __value_dict = {k: 0. for k in np.arange(1, 51)}
-
-        # Append 'columns' to the dictionary.
-        for part in ['self', 'opponent']:
-            for name in statnames:
-
-                multiIndexDict[(part, 'stats', name)] = __value_dict
-
-            multiIndexDict[(part, 'status')] = __value_dict
-            multiIndexDict[(part, 'damage')] = __value_dict
-
-        # Create a dataframe from the dictionary.
-        __events = DataFrame(multiIndexDict)
-
-        # Add three top-level columns.
-        __zeros = np.zeros((50, 1))
-        for top in ['order', 'move', 'item']:
-            __events[top] = __zeros
-
-        # Set the index name.
-        __events.index.names = ['turn']
-
-        # ... and finally
-        # No longer making `events` a protected property, due to its
-        # complex level structure.
-        self.events = __events
 
         self.__counter = 0  # a counter for `__next__`
 
@@ -424,26 +410,26 @@ class Trainer():
 
 
 def test():
-    from mechanisms.main import attack
-    a = Trainer()
-    b = Trainer()
-    s = Pokemon(123)
-    ad = Pokemon(123)
+#    a = Trainer()
+#    b = Trainer()
+    p1 = Pokemon(123)
+    p2 = Pokemon(246)
+    p1.status += Status(4)
+    # print(set(p1.status))
 
-    p1 = a.party(2)
-    p2 = b.party(2)
+    print(sum(p1.ev), p2.ev)
+#    p1 = a.party(2)
+#    p2 = b.party(2)
     m1 = p1.moves[1]
     m2 = p2.moves[1]
 
-    attack(p1, m1, p2, m2)
+    print(p1.moves)
+    # attack(p1, m1, p2, m2)
 #    a.set_pokemon(1, ad)
 #    b.set_pokemon(1, Pokemon(123))
 #    print(a.party(1) == b.party(1))
 #    print(a, b)
 #    print(s.trainer, ad.trainer)
 
-    events = a.events.self.status
-    events.loc[1, ] = 100
-    print(a.events.self.status[:5])
 
 # test()
