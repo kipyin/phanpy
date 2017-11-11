@@ -105,6 +105,19 @@ def is_mobile(f, m):
         # flag.
         return False
 
+    elif 'confusion' in statuses:
+        # The confused condition causes a Pokémon to sometimes hurt
+        # itself in its confusion instead of executing a selected move.
+        # From Generation I to VI, the chance to hurt itself is 50%;
+        # in Generation VII, it is 33%. The damage is done as if the
+        # Pokémon attacked itself with a 40-power typeless physical
+        # attack (without the possibility of a critical hit).
+        if binomial(1, 0.5):
+            f1.current.hp -= 2 + (2 * (f1.level/5 + 1) * 40 * A/D) // 50
+            return False
+        else:
+            return True
+
     return True
 
 
@@ -818,7 +831,7 @@ def inflict_ailment(f1, m1, f2, m2):
             f2.status += ailment
 
 
-def ailment_damage(f1, m1, f2, m2):
+def ailment_damage(f1, m1, f2, m2):  # 'post-attack' damage
     """Takes the damage if the pokemon has certain statuses. The damage
     is effect **at the end of the turn**.
 
@@ -889,7 +902,36 @@ def mid_attack_effect(f1, m1, f2, m2):
         # moves that inflicts status conditions.
         inflict_ailment(f1, m1, f2, m2)
 
-    if effect == 83:
+    if effect == 26:
+        # Removes [stat]{mechanic:stat}, [accuracy]{mechanic:accuracy},
+        # and [evasion]{mechanic:evasion} modifiers from every Pokémon
+        # on the [field]{mechanic:field}.
+        #
+        # This does not count as a stat reduction for the purposes of
+        # []{ability:clear-body} or []{ability:white-smoke}.
+        for f in [f1, f2]:
+            for stat in f.STAT_NAMES:
+                f.current[stat] = f.stats[stat]
+            for stat in ['accuracy', 'evasion']:
+                f.current[stat] = 100.
+
+    elif effect == 58:
+        # User copies the target's species, weight, type,
+        # [ability]{mechanic:ability}, [calculated stats]{mechanic:
+        # calculated-stats} (except [HP]{mechanic:hp}), and moves.
+        # Copied moves will all have 5 [PP]{mechanic:pp} remaining.
+        # [IV]{mechanic:iv}s are copied for the purposes of []{move:
+        # hidden-power}, but stats are not recalculated.
+        #
+        # []{item:choice-band}, []{item:choice-scarf}, and []{item:
+        # choice-specs} stay in effect, and the user must select a new
+        # move.
+        #
+        # This move cannot be copied by []{move:mirror-move}, nor forced
+        # by []{move:encore}.
+        pass
+
+    elif effect == 83:
         # This move is replaced by the target's last successfully used
         # move, and its PP changes to 5.  If the target hasn't used a
         # move since entering the field, if it tried to use a move this
@@ -908,7 +950,7 @@ def mid_attack_effect(f1, m1, f2, m2):
             m1 = Move(f2.flags['last-successfully-used-move'])
             m1.pp = 5
 
-    if effect == 84:
+    elif effect == 84:
         # Selects any move at random and uses it.
         # Moves the user already knows are not eligible.
         # Assist, meta, protection, and reflection moves are also not
@@ -940,6 +982,8 @@ def mid_attack_effect(f1, m1, f2, m2):
         all_moves = deque([x for x in tb.moves.identifier.values])
         eligible_moves = list(set(all_moves) - set(ineligible_moves))
         m1 = np.random.choice(eligible_moves)
+
+    elif effect ==
 
 
 # Order, move, and item should be recorded before calling this function.
