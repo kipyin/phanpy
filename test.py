@@ -42,4 +42,4 @@ def test():
 '''
 
 # test()
-print(str(t.timeit('test()', setup=s, number=30)) + 's')
+print(str(t.timeit('test()', setup=s, number=6)) + 's')
