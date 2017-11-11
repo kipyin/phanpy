@@ -10,6 +10,7 @@ root_path = file_path.replace('/mechanisms', '')
 sys.path.append(root_path) if root_path not in sys.path else None
 '''
 
+from collections import deque
 from functools import reduce
 
 import numpy as np
@@ -21,6 +22,7 @@ from mechanisms.data.tables import move_natural_gift
 # XXX: consider merging all classes into one file.
 from mechanisms.core.item import Item
 from mechanisms.core.status import Status
+import mechanisms.data.tables as tb
 
 
 def order_of_attack(p1, p1_move, p2, p2_move):
@@ -748,18 +750,6 @@ def calculate_damage(f1, m1, f2, m2):
         return regular_damage(f1, m1, f2, m2)
 
 
-def unique_effect(f1, m1, f2, m2):
-    """Activates m1's effect if it is a unique effect.
-
-    Exceptions
-    ----------
-        Move id     | Effect id
-            18      |   29
-
-    """
-    pass
-
-
 def stat_changer(f1, m1, f2, m2):
     """Activates m1's effects if it is **stat-change related**.
 
@@ -863,6 +853,95 @@ def ailment_damage(f1, m1, f2, m2):
         f1.current.hp -= damage
 
 
+def mid_attack_effect(f1, m1, f2, m2):
+    """Activates m1's effect if it is a unique effect.
+
+    Exceptions
+    ----------
+        Move id     | Effect id
+       -------------|-----------
+         18, 46     |   29
+         54         |   47
+         100        |   154
+         102        |   83
+         113        |   36
+
+
+    """
+
+    effect = m1.effect_id
+    if not np.isnan(m1.healing):
+        # A positive heal cures the user; a negative heal damages
+        # the user, based on the user's max hp.
+        f1.current.hp += m1.healing * f1.stats.hp // 100.
+
+    if not np.isnan(m1.flinch_chance) and f2.order == 2:  # oxymoron?
+        # If the move makes the opponent flinch, then add `flinch`
+        # to the opponent's status.
+        if binomial(1, m1.flinch_chance/100.):
+            f2.status += Status('flinch', 1)
+
+    if not str(m1.stat_change).isnumeric():
+        # stat-changers
+        stat_changer(f1, m1, f2, m2)
+
+    if m1.meta_category_id in[1, 5]:
+        # moves that inflicts status conditions.
+        inflict_ailment(f1, m1, f2, m2)
+
+    if effect == 83:
+        # This move is replaced by the target's last successfully used
+        # move, and its PP changes to 5.  If the target hasn't used a
+        # move since entering the field, if it tried to use a move this
+        # turn and [failed]{mechanic:fail}, or if the user already knows
+        # the targeted move, this move will fail.  This effect vanishes
+        # when the user leaves the field.
+        #
+        # If []{move:chatter}, []{move:metronome}, []{move:mimic},
+        # []{move:sketch}, or []{move:struggle} is selected, this move
+        # will [fail]{mechanic:fail}.
+        #
+        # This move cannot be copied by []{move:mirror-move}, nor
+        # selected by []{move:assist} or []{move:metronome}, nor forced
+        # by []{move:encore}.
+        if 'last-successfully-used-move' in f2.flags:
+            m1 = Move(f2.flags['last-successfully-used-move'])
+            m1.pp = 5
+
+    if effect == 84:
+        # Selects any move at random and uses it.
+        # Moves the user already knows are not eligible.
+        # Assist, meta, protection, and reflection moves are also not
+        # eligible; specifically, []{move:assist}, []{move:chatter},
+        # []{move:copycat}, []{move:counter}, []{move:covet},
+        # []{move:destiny-bond}, []{move:detect}, []{move:endure},
+        # []{move:feint}, []{move:focus-punch}, []{move:follow-me},
+        # []{move:helping-hand}, []{move:me-first}, []{move:metronome},
+        # []]{move:mimic}, []{move:mirror-coat}, []{move:mirror-move},
+        # []{move:protect}, []{move:quick-guard}, []{move:sketch},
+        # []{move:sleep-talk}, []{move:snatch}, []{move:struggle},
+        # []{move:switcheroo}, []{move:thief}, []{move:trick}, and
+        # []{move:wide-guard} will not be selected by this move.
+        #
+        # This move cannot be copied by []{move:mimic} or
+        # []{move:mirror-move}, nor selected by []{move:assist},
+        # []{move:metronome}, or []{move:sleep-talk}.
+
+        ineligible_moves = deque([x.name for x in f1.moves])
+        ineligible_moves.extend(['assist', 'chatter', 'copycat', 'counter',
+                                 'covet', 'destiny-bond', 'detect', 'endure',
+                                 'feint', 'focus-punch', 'follow-me',
+                                 'helping-hand', 'me-first', 'metronome',
+                                 'mimic', 'mirror-coat', 'mirror-move',
+                                 'protect', 'quick-guard', 'sketch',
+                                 'sleep-talk', 'snatch', 'struggle',
+                                 'switcheroo', 'thief', 'trick', 'wide-guard'])
+
+        all_moves = deque([x for x in tb.moves.identifier.values])
+        eligible_moves = list(set(all_moves) - set(ineligible_moves))
+        m1 = np.random.choice(eligible_moves)
+
+
 # Order, move, and item should be recorded before calling this function.
 def attack(f1, m1, f2, m2):
     """f1 uses m1 to attack f2.
@@ -880,6 +959,7 @@ def attack(f1, m1, f2, m2):
     if makes_hit(f1, m1, f2):
         # Determine if the move is hit or not.
 
+        f1.flags['last-successfully-used-move'] = m1.id
         if m1.damage_class_id in [2, 3]:
             # For all moves that deal damage.
             # `direct_damage` checks if a move deals direct damage,
@@ -908,25 +988,9 @@ def attack(f1, m1, f2, m2):
             # Append 0 if no damage is dealt.
             f2.history.damage.appendleft(0)
 
-        if not np.isnan(m1.healing):
-            # A positive heal cures the user; a negative heal damages
-            # the user, based on the user's max hp.
-            f1.current.hp += m1.healing * f1.stats.hp // 100.
+        mid_attack_effect(f1, m1, f2, m2)
 
-        if not np.isnan(m1.flinch_chance):
-            # If the move makes the opponent flinch, then add `flinch`
-            # to the opponent's status.
-            if binomial(1, m1.flinch_chance/100.):
-                f2.status += Status('flinch')
-
-        if not str(m1.stat_change).isnumeric():
-            # stat-changers
-            stat_changer(f1, m1, f2, m2)
-
-        if m1.meta_category_id in[1, 5]:
-            # moves that inflicts status conditions.
-            inflict_ailment(f1, m1, f2, m2)
-
+        m1.pp -= 1
     else:
         pass
 
@@ -995,6 +1059,8 @@ def debug(player=None, ai=None, display=True):
                 end = True
                 break
 
+        f1.status.reduce()
+        f1.status.reduce()
         turn += 1
 
 
