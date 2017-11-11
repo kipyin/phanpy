@@ -820,6 +820,17 @@ def inflict_ailment(f1, m1, f2, m2):
         if m1.target_id == 7:
             # Self-inflicted ailment
             f1.status += ailment
+            if m1.effect == 38:
+                # User sleeps for two turns, completely healing itself.
+                # At the beginning of each round, ``is_mobile()``
+                # should check if 'rest' is in ``f1.flags`` and if
+                # 'sleep' is **not** in ``f1.status``. If both are
+                # ``True``, then that means the user once slept and now
+                # 'sleep' status has worn off.
+                # Then restore all user's current hp. Heal the user and
+                # remove the flag.
+
+                f1.flags['rest'] = True
 
         elif m1.target_id == 14:
             # ailment inflicted to all pokemons.
@@ -983,7 +994,25 @@ def mid_attack_effect(f1, m1, f2, m2):
         eligible_moves = list(set(all_moves) - set(ineligible_moves))
         m1 = np.random.choice(eligible_moves)
 
-    elif effect ==
+    elif effect == 95:
+        # If the user targets the same target again before the end of
+        # the next turn, the move it uses is guaranteed to hit.
+        # This move itself also ignores [accuracy]{mechanic:accuracy}
+        # and [evasion]{mechanic:evasion} modifiers.
+        #
+        # One-hit KO moves are also guaranteed to hit, as long as the
+        # user is equal or higher level than the target.  This effect
+        # also allows the user to hit Pokémon that are off the field
+        # due to moves such as []{move:dig} or []{move:fly}.
+        #
+        # If the target uses []{move:detect} or []{move:protect} while
+        # under the effect of this move, the user is not guaranteed to
+        # hit, but has a (100 - accuracy)% chance to break through the
+        # protection.
+        #
+        # This effect is passed on by []{move:baton-pass}.
+
+        f2.status += Status('taking-aim', 2)
 
 
 # Order, move, and item should be recorded before calling this function.
