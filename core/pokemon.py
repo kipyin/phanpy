@@ -226,20 +226,9 @@ class Pokemon():
         # Set the in-battle only stats.
         # Each stat has a stage and a value. We can calculate the values
         # based on the stages every round.
-        self.current = Series(index=self.CURRENT_STAT_NAMES,
-                              data=list(self.stats) + [100., 100., 100.])
 
         self.stage = Series(index=self.CURRENT_STAT_NAMES,
-                            data=[0. for x in range(9)])
-
-        # These are the numbers that the current stats get multiplied
-        # by based on the stages.
-        # In some sense,
-        # self.current = self.stats.values * self.stage_facotr.values
-        # except for 'critical' and 'hp', as 'hp's damage is a dummy
-        # var.
-        self.stage_factor = Series(index=self.CURRENT_STAT_NAMES,
-                                   data=[1. for x in range(9)])
+                            data=np.zeros(len(self.CURRENT_STAT_NAMES)))
 
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
@@ -368,6 +357,43 @@ class Pokemon():
         __nature_modifier = (__increased_stat + __decreased_stat) + 1.
         self.nature_modifier = Series(data=__nature_modifier,
                                       index=self.STAT_NAMES)
+
+    @property
+    def stage_factor(self):
+        """These are the numbers that the current stats get multiplied
+        by based on the stages.
+        In some sense,
+        self.current.values = (self.stats.values
+                               * self.stage_facotr.values)
+        except for 'hp', as hp's damage is a dummy var.
+        """
+        stage_to_factor = {
+                       -6: 2./8., 6: 8./2.,
+                       -5: 2./7., 5: 7./2.,
+                       -4: 2./6., 4: 6./2.,
+                       -3: 2./5., 3: 5./2.,
+                       -2: 2./4., 2: 4./2.,
+                       -1: 2./3., 1: 3./2.,
+                       0: 1.
+                           }
+
+        factors = np.ones(len(self.CURRENT_STAT_NAMES))
+        for i, stage in enumerate(self.stage):
+            factors[i] *= stage_to_factor[stage]
+
+        return Series(index=self.CURRENT_STAT_NAMES, data=factors)
+
+    @property
+    def current(self):
+        """Calcuate the in-battle stats based on the pokemon's
+        calcualted stats and its stage factors.
+        """
+        # Set the baseline
+        current = deque(self.stats.values)
+        current.extend([100., 100., 100.])
+        current = np.array(current)
+        current *= self.stage_factor.values
+        return Series(index=self.CURRENT_STAT_NAMES, data=current)
 
 
 class Trainer():
