@@ -8,4 +8,4 @@ Required package:
 
 See also:
 
-[Documentation](https://github.com/kiphub/pokemon-battle-mechanism.wiki.git)
+[Project Overview](https://github.com/kiphub/pokemon-battle-mechanism.wiki.git)
