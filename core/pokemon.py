@@ -189,28 +189,6 @@ class Pokemon():
         self.nature_modifier = Series(data=__nature_modifier,
                                       index=self.STAT_NAMES)
 
-        # ------------------ STATS Initialization -------------------- #
-
-        # Stats determination.
-        # `__inner` is common for both HP and other stats calculations.
-
-        __inner = ((2. * self.base + self.iv + np.floor(self.ev/4.))
-                   * self.level)/100.
-
-        # For all the stats other than HP:
-        self.stats = np.floor((np.floor(__inner) + 5.) * self.nature_modifier)
-
-        # For HP:
-        self.stats.hp = np.floor(__inner.hp) + self.level + 10.
-
-        # Shedinja always has at most 1 HP.
-        if self.name == 'shedinja':
-            self.stats.hp = 1.
-
-        # Reindex the stats dataframe to conform with the indices on
-        # the table.
-        self.stats = self.stats.reindex(self.STAT_NAMES)
-
         # ------------------ ABILITY Initialization ------------------ #
 
         # TODO: hidden abilities?
@@ -267,20 +245,9 @@ class Pokemon():
         # Any miscellaneous flag and its duration a Pokémon might have,
         # such as {'stockpile': 1.}, where the meaning of the value(s)
         # depends on the flag.
-        # XXX Change the flags' type to ``namedtuple``?
         self.flags = defaultdict()
 
-        # Should items have their own class? Probably not?
-        self.item = Item(0)
-
-        if self.item.id in [303, 209]:
-
-            self.stage.critical = 1
-
-        elif ((self.id == 83 and self.item.id == 236) or
-              (self.id == 113 and self.item.id == 233)):
-
-            self.stage.critical = 2
+        self._item = Item(0)
 
         self.trainer = None
 
@@ -307,56 +274,28 @@ class Pokemon():
         else:
             return False
 
-    def reset_current(self):
-        """The current stats should be reset after each battle,
-        after changes made by leveling-up.
+    @property
+    def stats(self):
+        """Stats determination.
+
+        `__inner` is common for both HP and other stats calculations.
         """
-        # Reset the in-battle stats after switching out | after a battle.
-        self.current = Series(index=self.CURRENT_STAT_NAMES,
-                              data=list(self.stats) + [100., 100.])
 
-        self.stage = Series(index=self.__stage_stat_name,
-                            data=[0 for x in range(9)])
+        __inner = (2. * self.base + self.iv + self.ev//4.) * self.level//100.
 
-        # self.status = Status(0)
+        # For all the stats other than HP:
+        calculated_stats = np.floor(__inner + 5.) * self.nature_modifier//1.
 
-    def set_nature(self, which_nature):
-        """Set the nature given its id or name."""
-        if str(which_nature) in tb.natures.identifier.values:
-            # If given the nature's name
-            __name = which_nature
-            __id = tb.natures[tb.natures['identifier'] == __name]['id'].values[0]
+        # For HP:
+        calculated_stats.hp = np.floor(__inner.hp) + self.level + 10.
 
-        elif which_nature in tb.natures.id.values:
-            # If given the nature's id
-            __id = which_nature
-            __name = tb.natures[tb.natures['id'] == __id]['identifier'].values[0]
+        # Shedinja always has at most 1 HP.
+        if self.name == 'shedinja':
+            calculated_stats.hp = 1.
 
-        else:
-            raise KeyError("{} is not a valid nature reference."
-                           "".format(which_nature))
-
-        __nature_subset = tb.natures[tb.natures['id'] == __id]
-
-        self.nature = Series(index=["id", "name"],
-                             data=[__id, __name])
-
-        # The nature affects one's stats. The nature usually raises one
-        # stat by 1.1 and lowers another by 0.9.
-        __decreased_stat = np.array([0. for x in range(6)])
-        __increased_stat = np.array([0. for x in range(6)])
-
-        for x in range(1, 7):
-
-            if x == __nature_subset["decreased_stat_id"].values[0]:
-                __decreased_stat[x-1] -= 0.1
-
-            if x == __nature_subset["increased_stat_id"].values[0]:
-                __increased_stat[x-1] += 0.1
-
-        __nature_modifier = (__increased_stat + __decreased_stat) + 1.
-        self.nature_modifier = Series(data=__nature_modifier,
-                                      index=self.STAT_NAMES)
+        # Reindex the stats dataframe to conform with the indices on
+        # the table.
+        return calculated_stats.reindex(self.STAT_NAMES)
 
     @property
     def stage_factor(self):
@@ -393,8 +332,100 @@ class Pokemon():
         current.extend([100., 100., 100.])
         current = np.array(current)
         current *= self.stage_factor.values
-        return Series(index=self.CURRENT_STAT_NAMES, data=current)
+        return Series(index=self.CURRENT_STAT_NAMES, data=np.floor(current))
 
+    @property
+    def item(self):
+        return self._item
+
+    @item.setter
+    def item(self, item):
+        if item.id in [303, 209]:
+            self.stage.critical = 1
+
+        elif ((self.id == 83 and item.id == 236) or
+              (self.id == 113 and item.id == 233)):
+            self.stage.critical = 2
+
+        self._item = item
+
+    def reset_current(self):
+        """The current stats should be reset after each battle,
+        after changes made by leveling-up.
+        """
+        # Reset the in-battle stats after switching out | after a battle.
+        self.current = Series(index=self.CURRENT_STAT_NAMES,
+                              data=list(self.stats) + [100., 100.])
+
+        self.stage = Series(index=self.__stage_stat_name,
+                            data=[0 for x in range(9)])
+
+        # self.status = Status(0)
+
+    def set_nature(self, which_nature):
+        """Set the nature given its id or name."""
+        if which_nature in list(tb.natures.identifier.values):
+            # If given the nature's name
+            __name = which_nature
+            __id = tb.natures[tb.natures['identifier'] == __name]['id'].values[0]
+
+        elif which_nature in list(tb.natures.id.values):
+            # If given the nature's id
+            __id = which_nature
+            __name = tb.natures[tb.natures['id'] == __id]['identifier'].values[0]
+
+        else:
+            raise KeyError("{} is not a valid nature reference."
+                           "".format(which_nature))
+
+        __nature_subset = tb.natures[tb.natures['id'] == __id]
+
+        self.nature = Series(index=["id", "name"],
+                             data=[__id, __name])
+
+        # The nature affects one's stats. The nature usually raises one
+        # stat by 1.1 and lowers another by 0.9.
+        __decreased_stat = np.array([0. for x in range(6)])
+        __increased_stat = np.array([0. for x in range(6)])
+
+        for x in range(1, 7):
+
+            if x == __nature_subset["decreased_stat_id"].values[0]:
+                __decreased_stat[x-1] -= 0.1
+
+            if x == __nature_subset["increased_stat_id"].values[0]:
+                __increased_stat[x-1] += 0.1
+
+        __nature_modifier = (__increased_stat + __decreased_stat) + 1.
+        self.nature_modifier = Series(data=__nature_modifier,
+                                      index=self.STAT_NAMES)
+
+
+    def set_ev(self, iterable):
+        """Assign ev's from the iterable.
+
+        Note that this can even set illegal ev's.
+        """
+        if len(iterable) != 6:
+            raise ValueError("The iterable must have a length of 6.")
+
+        for i in range(6):
+            self.ev[i] = iterable[i]
+
+        return self.ev
+
+    def set_iv(self, iterable):
+        """Assign iv's from the iterable.
+
+        Note that this can even set illegal iv's.
+        """
+        if len(iterable) != 6:
+            raise ValueError("The iterable must have a length of 6.")
+
+        for i in range(6):
+            self.iv[i] = iterable[i]
+
+        return self.iv
 
 class Trainer():
     """Some awesome introductions.
