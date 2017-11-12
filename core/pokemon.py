@@ -66,7 +66,6 @@ class Pokemon():
                           'specialDefense', 'speed', 'accuracy', 'evasion']
 
     def __init__(self, which_pokemon, level=50):
-        # XXX: the try-except clause does nothing..?
 
         if which_pokemon in list(tb.pokemon.id.values):
             # If `which_pokemon` is a valid id.
@@ -80,28 +79,27 @@ class Pokemon():
             raise KeyError("`pokemon` has to be an integer"
                            " or a pokemon's name.")
 
-        # Set the id depending on the case.
-        pokemon_id = int(tb.pokemon[__condition].id)
-
-        # Set the label corresponds to the given id in the DataFrame.
-        LABEL = list(tb.pokemon[tb.pokemon["id"] == pokemon_id].index)[0]
+        # Get a subset of ``tb.pokemon`` based on the condition.
+        # Get the pokemon id from the subset.
+        pokemon = tb.pokemon[__condition]
+        pokemon_id = pokemon['id']
 
         # ------------ Initialization from `pokemon.csv` ------------- #
 
-        self.id = tb.pokemon.loc[LABEL, "id"]
-        self.identifier = tb.pokemon.loc[LABEL, "identifier"]
-        self.weight = tb.pokemon.loc[LABEL, 'weight']
-
+        self.id = pokemon["id"].values[0]
+        self.identifier = pokemon["identifier"].values[0]
+        self.weight = pokemon['weight'].values[0]
+        self.species_id = pokemon['species_id'].values[0]
         # -------- Initialization from `pokemon_species.csv` --------- #
 
-        p_species = tb.pokemon_species
+        __condition = tb.pokemon_species['id'] == self.species_id
+        p_species = tb.pokemon_species[__condition]
 
-        self.generation_id = p_species.loc[LABEL, "generation_id"]
-        self.gender_rate = p_species.loc[LABEL, "gender_rate"]
-        self.base_happiness = p_species.loc[LABEL, "base_happiness"]
-        self.gender_differences = p_species.loc[LABEL, "has_"
-                                                "gender_differences"]
-        self.forms_switchable = p_species.loc[LABEL, "forms_switchable"]
+        self.generation_id = p_species["generation_id"].values[0]
+        self.gender_rate = p_species["gender_rate"].values[0]
+        self.base_happiness = p_species["base_happiness"].values[0]
+        self.gender_differences = p_species["has_gender_differences"].values[0]
+        self.forms_switchable = p_species["forms_switchable"].values[0]
 
         self.name = self.identifier
 
@@ -147,7 +145,6 @@ class Pokemon():
 
         # Set the actual EV the Pokémon has.
         # Needed for stats calculation.
-
         # Insert marks to 5 randomly selected positions.
         __marks = np.append([np.random.uniform(0, 1) for x in range(5)], 1.)
 
@@ -165,35 +162,29 @@ class Pokemon():
         # ------------------ NATURE Initialization ------------------- #
 
         # Randomly assign a nature to the Pokémon.
-        self.nature_id = np.random.randint(1, 25)
+        __id = np.random.randint(1, 25)
+        __nature_subset = tb.natures[tb.natures['id'] == __id]
 
         # Set the relevant info with respect to the Pokémon's nature.
-        # TODO: flavors are not needed in a battle, so I might remove
-        # them in the future.
-        __id = self.nature_id
-        self.nature = Series(index=["id", "name",
-                                    "likes_flavor_id", "hates_flavor_id"],
-                             data=[self.nature_id,
-                                   tb.natures.loc[__id, "identifier"],
-                                   tb.natures.loc[__id, "likes_flavor_id"],
-                                   tb.natures.loc[__id, "hates_flavor_id"]])
-
-        self.nature.name = self.nature.iloc[1]
+        self.nature = Series(index=["id", "name"],
+                             data=[__id,
+                                   __nature_subset["identifier"].values[0]])
 
         # The nature affects one's stats. The nature usually raises one
         # stat by 1.1 and lowers another by 0.9.
-        __decreased_stat = np.array([1. for x in range(6)])
-        __increased_stat = np.array([1. for x in range(6)])
+        __decreased_stat = np.array([0. for x in range(6)])
+        __increased_stat = np.array([0. for x in range(6)])
+
 
         for x in range(1, 7):
 
-            if x == tb.natures.loc[self.nature_id, "decreased_stat_id"]:
-                __decreased_stat[x-1] = 0.9
+            if x == __nature_subset["decreased_stat_id"].values[0]:
+                __decreased_stat[x-1] -= 0.1
 
-            if x == tb.natures.loc[self.nature_id, "increased_stat_id"]:
-                __increased_stat[x-1] = 1.1
+            if x == __nature_subset["increased_stat_id"].values[0]:
+                __increased_stat[x-1] += 0.1
 
-        __nature_modifier = __increased_stat * __decreased_stat
+        __nature_modifier = (__increased_stat + __decreased_stat) + 1.
         self.nature_modifier = Series(data=__nature_modifier,
                                       index=self.STAT_NAMES)
 
@@ -338,6 +329,44 @@ class Pokemon():
                             data=[0 for x in range(9)])
 
         # self.status = Status(0)
+
+    def set_nature(self, which_nature):
+        """Set the nature given its id or name."""
+        if str(which_nature) in tb.natures.identifier.values:
+            # If given the nature's name
+            __name = which_nature
+            __id = tb.natures[tb.natures['identifier'] == __name]['id'].values[0]
+
+        elif which_nature in tb.natures.id.values:
+            # If given the nature's id
+            __id = which_nature
+            __name = tb.natures[tb.natures['id'] == __id]['identifier'].values[0]
+
+        else:
+            raise KeyError("{} is not a valid nature reference."
+                           "".format(which_nature))
+
+        __nature_subset = tb.natures[tb.natures['id'] == __id]
+
+        self.nature = Series(index=["id", "name"],
+                             data=[__id, __name])
+
+        # The nature affects one's stats. The nature usually raises one
+        # stat by 1.1 and lowers another by 0.9.
+        __decreased_stat = np.array([0. for x in range(6)])
+        __increased_stat = np.array([0. for x in range(6)])
+
+        for x in range(1, 7):
+
+            if x == __nature_subset["decreased_stat_id"].values[0]:
+                __decreased_stat[x-1] -= 0.1
+
+            if x == __nature_subset["increased_stat_id"].values[0]:
+                __increased_stat[x-1] += 0.1
+
+        __nature_modifier = (__increased_stat + __decreased_stat) + 1.
+        self.nature_modifier = Series(data=__nature_modifier,
+                                      index=self.STAT_NAMES)
 
 
 class Trainer():
