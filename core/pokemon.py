@@ -256,6 +256,9 @@ class Pokemon():
 
         self.order = 0
 
+        # Set a unique id for each Pokemon.
+        self.unique_id = np.random.randint(100000, 999999)
+
         # -------------------------- END ----------------------------- #
 
     def __str__(self):
@@ -269,7 +272,8 @@ class Pokemon():
         If they have the same individual values and they have the
         same name, then they are considered to be the same pokemon.
         """
-        if (self.iv.values == other.iv.values).all():
+        if ((self.iv.values == other.iv.values).all()
+            and (self.unique_id == other.unique_id)):
             return True
         else:
             return False
@@ -332,7 +336,8 @@ class Pokemon():
         current.extend([100., 100., 100.])
         current = np.array(current)
         current *= self.stage_factor.values
-        return Series(index=self.CURRENT_STAT_NAMES, data=np.floor(current))
+        return Series(index=self.CURRENT_STAT_NAMES,
+                      data=np.floor(current))
 
     @property
     def item(self):
@@ -353,14 +358,9 @@ class Pokemon():
         """The current stats should be reset after each battle,
         after changes made by leveling-up.
         """
-        # Reset the in-battle stats after switching out | after a battle.
-        self.current = Series(index=self.CURRENT_STAT_NAMES,
-                              data=list(self.stats) + [100., 100.])
-
-        self.stage = Series(index=self.__stage_stat_name,
-                            data=[0 for x in range(9)])
-
-        # self.status = Status(0)
+        # Reset the stage should automatically reset the current stats.
+        self.stage = Series(index=self.CURRENT_STAT_NAMES,
+                            data=np.zeros(len(self.CURRENT_STAT_NAMES)))
 
     def set_nature(self, which_nature):
         """Set the nature given its id or name."""
@@ -399,7 +399,6 @@ class Pokemon():
         __nature_modifier = (__increased_stat + __decreased_stat) + 1.
         self.nature_modifier = Series(data=__nature_modifier,
                                       index=self.STAT_NAMES)
-
 
     def set_ev(self, iterable):
         """Assign ev's from the iterable.
@@ -451,7 +450,6 @@ class Trainer():
         self.__counter = 0  # a counter for `__next__`
 
     def __iter__(self):
-
         return self
 
     def __next__(self):
@@ -494,29 +492,3 @@ class Trainer():
         self._party[slot-1].trainer = self
 
         print("{} is added to slot {}.".format(pokemon.name, slot))
-
-
-def test():
-#    a = Trainer()
-#    b = Trainer()
-    p1 = Pokemon(123)
-    p2 = Pokemon(246)
-    p1.status += Status(4)
-    # print(set(p1.status))
-
-    print(sum(p1.ev), p2.ev)
-#    p1 = a.party(2)
-#    p2 = b.party(2)
-    m1 = p1.moves[1]
-    m2 = p2.moves[1]
-
-    print(p1.moves)
-    # attack(p1, m1, p2, m2)
-#    a.set_pokemon(1, ad)
-#    b.set_pokemon(1, Pokemon(123))
-#    print(a.party(1) == b.party(1))
-#    print(a, b)
-#    print(s.trainer, ad.trainer)
-
-
-# test()
