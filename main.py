@@ -887,7 +887,6 @@ def mid_attack_effect(f1, m1, f2, m2):
          18, 46     |   29
          54         |   47
          100        |   154
-         102        |   83
          113        |   36
 
 
@@ -940,7 +939,7 @@ def mid_attack_effect(f1, m1, f2, m2):
         #
         # This move cannot be copied by []{move:mirror-move}, nor forced
         # by []{move:encore}.
-        pass
+        pass  # XXX: passed.
 
     elif effect == 83:
         # This move is replaced by the target's last successfully used
@@ -1012,7 +1011,23 @@ def mid_attack_effect(f1, m1, f2, m2):
         #
         # This effect is passed on by []{move:baton-pass}.
 
+        # XXX: finish its counterpart in ``makes_hit``
         f2.status += Status('taking-aim', 2)
+
+    elif effect == 101:
+        # Lowers the PP of the target's last used move by 4.
+        # If the target hasn't used a move since entering the [field]
+        # {mechanic:field}, if it tried to use a move this turn and
+        # [failed]{mechanic:failed}, or if its last used move has 0 PP
+        # remaining, this move will fail.
+
+        move_names = [x.name for x in f2.moves]
+        try:
+            last_move = f2.flags['last-successfully-used-move']
+            index = np.where(move_names == last_move)[0][0]
+            f2.moves[index].pp -= 4
+        except KeyError:
+            pass
 
 
 # Order, move, and item should be recorded before calling this function.
@@ -1114,7 +1129,7 @@ def debug(player=None, ai=None, display=True):
                                                              m.power,
                                                              m.accuracy))
                 attack(f, m, g, n)
-                ailment_damage(f, m)
+                ailment_damage(f, m, g, n)
                 # print(g.history)
                 if display:
                     print("{}'s hp: {}\n"
@@ -1142,4 +1157,4 @@ def test(n, d=True):
         debug(display=d)
 
 
-test(10, False)
+# test(10, False)
