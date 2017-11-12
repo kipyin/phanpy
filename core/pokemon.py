@@ -63,7 +63,8 @@ class Pokemon():
                   'specialAttack', 'specialDefense', 'speed']
 
     CURRENT_STAT_NAMES = ['hp', 'attack', 'defense', 'specialAttack',
-                          'specialDefense', 'speed', 'accuracy', 'evasion']
+                          'specialDefense', 'speed', 'accuracy', 'evasion',
+                          'critical']
 
     def __init__(self, which_pokemon, level=50):
 
@@ -226,11 +227,10 @@ class Pokemon():
         # Each stat has a stage and a value. We can calculate the values
         # based on the stages every round.
         self.current = Series(index=self.CURRENT_STAT_NAMES,
-                              data=list(self.stats) + [100., 100.])
+                              data=list(self.stats) + [100., 100., 100.])
 
-        __stage_stat_name = self.CURRENT_STAT_NAMES + ['critical']
-        self.stage = Series(index=__stage_stat_name,
-                            data=[0 for x in range(9)])
+        self.stage = Series(index=self.CURRENT_STAT_NAMES,
+                            data=[0. for x in range(9)])
 
         # These are the numbers that the current stats get multiplied
         # by based on the stages.
@@ -238,14 +238,15 @@ class Pokemon():
         # self.current = self.stats.values * self.stage_facotr.values
         # except for 'critical' and 'hp', as 'hp's damage is a dummy
         # var.
-        self.stage_factor = Series(index=__stage_stat_name,
-                                   data=[1 for x in range(9)])
+        self.stage_factor = Series(index=self.CURRENT_STAT_NAMES,
+                                   data=[1. for x in range(9)])
 
         # Set the Pokémon's status. Detaults to None.
         self.status = Status(0)
 
         # Records the received damages. Has a memory of 5 turns.
         # If its length is over 5, delete the oldest damage.
+        # Always use `appendleft()` to append a new damage.
         __received_damage = deque([], maxlen=5)
 
         self.history = Series(data=np.array([__received_damage, 0]),
