@@ -14,8 +14,7 @@ from mechanisms.data.tables import (items, item_fling_effects,
 
 
 class Item():
-    """A class for items.
-    """
+    """A class for items."""
 
     def __init__(self, which_item):
 
@@ -30,7 +29,7 @@ class Item():
                 raise KeyError("Invalid item id.")
             else:
                 __subset = items[items["id"] == which_item]
-                __name = __subset["identifier"].values
+                __name = __subset["identifier"].values[0]
                 __id = which_item
 
         elif which_item in items.identifier.values:
