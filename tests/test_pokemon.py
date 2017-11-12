@@ -119,3 +119,28 @@ class TestPokemon():
         p = setup
         p.item = Item(303)
         assert p.stage.critical == 1.
+
+    def test_reset_current_stats(self, setup):
+        p = setup
+        p.stage += 3
+        p.reset_current()
+        assert p.current.attack == p.stats.attack
+
+    def test_two_pokemons_are_equal(self, setup):
+        p = setup
+        q = Pokemon(10001)
+        assert p != q
+        q.set_iv(p.iv.values)
+        q.unique_id = p.unique_id
+        assert p == q
+
+    def test_trainer_set_pokemon(self):
+        t = Trainer('Satoshi')
+        t.set_pokemon(3, Pokemon(10005))
+        assert t.party(3).name == 'wormadam-trash'
+
+    def test_set_trainers_pokemons_moves(self):
+        t = Trainer('Satoshi')
+        t.set_pokemon(3, Pokemon(10001))
+        t.party(1).moves[1] = Move(33)
+        assert t.party(1).moves[1].name == 'tackle'
