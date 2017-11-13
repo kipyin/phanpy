@@ -5,14 +5,142 @@ Created on Sat Nov  4 17:20:44 2017
 
 @author: Kip
 """
+
+import os
+
+from collections import namedtuple
+
 from pandas import read_csv
 
-from phanpy.config import VERSION_GROUP_ID, REGION_ID, DATA_PATH
+turn = 1
 
+FILE_PATH = os.path.dirname(os.path.abspath(__file__))
+ROOT_PATH = FILE_PATH.replace('/data', '')
+CORE_PATH = ROOT_PATH + '/core'
+DATA_PATH = ROOT_PATH + '/data/csv/'
 
 path = DATA_PATH
 
-# FIXME: make these tables generation-friendly.
+# ---------------------- Version Related Files ----------------------- #
+def which_version(identifier=None,
+                  VERSION_GROUP_ID=None,
+                  REGION_ID=None,
+                  VERSION_ID=None):
+    """Returns a tuple (VERSION_GROUP_ID, REGION_ID, VERSION_ID)
+
+    Usage
+    -----
+        >>> VERSION_GROUP_ID, REGION_ID, VERSION_ID =
+        ...     which_version('firered')
+        >>> print(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
+        (7, 1, 10)
+
+    Parameters
+    ----------
+        identifier : str
+            The official name of a game; should be in the following
+            list:
+            red, blue, yellow, gold, silver, crystal,
+            ruby, sapphire, emerald, firered, leafgreen,
+            diamond, pearl, platinum, heartgold, soulsilver,
+            black, white, black-2, white-2,
+            x, y, omega-ruby, alpha-sapphire, sun, moon,
+
+    """
+
+    # Import version control related files first.
+    with open(DATA_PATH + 'version_group_regions.csv') as csv_file:
+        version_group_regions = read_csv(csv_file)
+
+    with open(DATA_PATH + 'versions.csv') as csv_file:
+        versions = read_csv(csv_file)
+
+    __vgr = version_group_regions
+
+    if identifier:
+        try:
+
+            __filter = versions["identifier"] == identifier
+            VERSION_GROUP_ID = int(versions[__filter]["version_group_id"])
+
+            __filter = versions["identifier"] == identifier
+            VERSION_ID = int(versions[__filter]["id"])
+
+            __filter = __vgr["version_group_id"] == int(VERSION_GROUP_ID)
+            REGION_ID = int(__vgr[__filter]["region_id"])
+
+        except Exception:
+
+            raise ValueError(
+                        "The game name should be one of the following"
+                        " list:\nred, blue, yellow, gold, silver, "
+                        "crystal,\nruby, sapphire, emerald, firered, "
+                        "leafgreen,\ndiamond, pearl, platinum, "
+                        "heartgold, soulsilver,\nblack, white, "
+                        "black-2, white-2,\nx, y, omega-ruby, "
+                        "alpha-sapphire, sun, moon."
+                            )
+
+    elif VERSION_GROUP_ID:
+        try:
+
+            __filter = __vgr["version_group_id"] == int(VERSION_GROUP_ID)
+            REGION_ID = int(__vgr[__filter]["region_id"])
+
+            __filter = versions["version_group_id"] == VERSION_GROUP_ID
+            VERSION_ID = int(versions[__filter]["id"])
+
+        except Exception:
+
+            raise ValueError("Incorrect version group id.")
+
+    elif REGION_ID:
+        try:
+
+            __filter = __vgr["region_id"] == int(REGION_ID)
+            VERSION_GROUP_ID = int(__vgr[__filter]["version_group_id"])
+
+            __filter = versions["version_group_id"] == VERSION_GROUP_ID
+            VERSION_ID = int(versions[__filter]["id"])
+
+        except Exception:
+
+            raise ValueError("Incorrect region id.")
+
+    elif VERSION_ID:
+        try:
+
+            __filter = versions["id"] == VERSION_ID
+            VERSION_GROUP_ID = int(versions[__filter]["version_group_id"])
+
+            __filter = __vgr["version_group_id"] == VERSION_GROUP_ID
+            REGION_ID = __vgr[__filter]["region_id"]
+
+        except Exception:
+
+            raise ValueError("Incorrect version id.")
+
+    else:
+        pass
+
+    VersionInfo = namedtuple('VesionInfo', ['VERSION_GROUP_ID',
+                                            'REGION_ID',
+                                            'VERSION_ID'])
+    try:
+        return VersionInfo(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
+
+    except Exception:
+
+        raise ValueError("There should be at least one argument.")
+
+
+VERSION_GROUP_ID, REGION_ID, VERSION_ID = which_version('platinum')
+
+
+# ------------------------- All Other Files -------------------------- #
+
+with open(path + 'abilities.csv') as csv_file:
+    abilities = read_csv(csv_file)
 
 with open(path + 'experience.csv') as csv_file:
     experience = read_csv(csv_file)
@@ -83,3 +211,23 @@ with open(custom_path + 'move_flag_map.csv') as csv_file:
 
 with open(custom_path + 'move_natural_gift.csv') as csv_file:
     move_natural_gift = read_csv(csv_file)
+
+
+# ------------------------- Table Conversion ------------------------- #
+
+def which_ability(query):
+    """Return the corresponding name if given a valid id, and vice versa."""
+
+    ab = abilities
+
+    if query in list(ab['id'].values):
+        subset = ab[ab['id'] == query]
+        return str(subset['identifier'].values[0])
+
+    elif query in list(ab['identifier'].values):
+        subset = ab[ab['identifier'] == query]
+        return int(subset['id'].values[0])
+
+    else:
+        raise KeyError("{} is not a valid ability id nor a valid "
+                       "ability identifier!".format(query))
