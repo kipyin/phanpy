@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 import pytest
 
-import os
-import sys
+import os, sys
 
 file_path = os.path.dirname(os.path.abspath(__file__))
-root_path = file_path.replace('/mechanisms/tests', '')
+root_path = file_path.replace('/phanpy/tests', '')
 sys.path.append(root_path) if root_path not in sys.path else None
 
-# import numpy as np
-# from mechanisms.data import tables as tb
-
 import numpy as np
-from mechanisms.core.pokemon import Pokemon, Trainer
-from mechanisms.core.move import Move
-from mechanisms.core.item import Item
+from phanpy.core.pokemon import Pokemon, Trainer
+from phanpy.core.move import Move
+from phanpy.core.item import Item
 
 @pytest.fixture(scope='function')
 def setup():

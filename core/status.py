@@ -4,10 +4,12 @@
 Created on Sat Nov  4 04:22:57 2017
 @author: Kip
 """
+from os import sys, path
+sys.path.append(path.abspath('.'))
 
 import numpy as np
 
-from mechanisms.data.tables import ailments
+from phanpy.data.tables import ailments
 
 
 # TODO: finish the __doc__ string.

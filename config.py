@@ -14,7 +14,7 @@ from pandas import read_csv
 turn = 1
 
 FILE_PATH = os.path.dirname(os.path.abspath(__file__))
-ROOT_PATH = FILE_PATH.replace('/mechanisms', '')
+ROOT_PATH = FILE_PATH.replace('/phanpy', '')
 CORE_PATH = FILE_PATH + '/core'
 DATA_PATH = FILE_PATH + '/data/csv/'
 

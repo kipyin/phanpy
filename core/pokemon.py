@@ -10,10 +10,10 @@ from collections import deque, defaultdict
 from pandas import Series
 import numpy as np
 
-from mechanisms.core.item import Item
-from mechanisms.core.move import Move
-from mechanisms.core.status import Status
-from mechanisms.data import tables as tb
+from phanpy.core.item import Item
+from phanpy.core.move import Move
+from phanpy.core.status import Status
+from phanpy.data import tables as tb
 
 
 # XXX: finish the doc string

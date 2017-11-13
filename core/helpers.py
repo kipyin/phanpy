@@ -9,7 +9,7 @@ from functools import reduce
 
 from pandas import read_csv
 
-from mechanisms.config import DATA_PATH, REGION_ID
+from phanpy.config import DATA_PATH, REGION_ID
 
 path = DATA_PATH
 

@@ -7,7 +7,7 @@ Created on Sat Nov  4 17:20:44 2017
 """
 from pandas import read_csv
 
-from mechanisms.config import VERSION_GROUP_ID, REGION_ID, DATA_PATH
+from phanpy.config import VERSION_GROUP_ID, REGION_ID, DATA_PATH
 
 
 path = DATA_PATH

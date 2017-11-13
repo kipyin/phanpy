@@ -1,29 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''# Activate these codes when import fails.
-import os
-import sys
 
-file_path = os.path.dirname(os.path.abspath(__file__))
-root_path = file_path.replace('/mechanisms', '')
+# ============ Activate these codes when import fails. =============== #
+# Solution #1
+# import os
+# import sys
+#
+# file_path = os.path.dirname(os.path.abspath(__file__))
+# root_path = file_path.replace('/phanpy., '')
 
-sys.path.append(root_path) if root_path not in sys.path else None
-'''
+# sys.path.append(root_path) if root_path not in sys.path else None
+
+# Solution #2
+# import os, sys
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Solution #3
+from os import sys, path
+sys.path.append(path.abspath('.'))
 
 from collections import deque
 from functools import reduce
-
 import numpy as np
 from numpy.random import binomial, uniform, randint, choice
 
-from mechanisms.core.helpers import efficacy
-from mechanisms.data.tables import move_natural_gift
+from phanpy.core.helpers import efficacy
+from phanpy.core.item import Item
+from phanpy.core.status import Status
+import phanpy.data.tables as tb
 
-# XXX: consider merging all classes into one file.
-from mechanisms.core.item import Item
-from mechanisms.core.status import Status
-import mechanisms.data.tables as tb
-
+move_natural_gift = tb.move_natural_gift
 
 def order_of_attack(p1, p1_move, p2, p2_move):
     """Determines the order of attack.
@@ -60,19 +66,10 @@ def order_of_attack(p1, p1_move, p2, p2_move):
 
 
 def is_mobile(f, m):
-    """If the Pokémon is able to **use** a selected move, return True.
+    """Return ``True`` if the Pokémon is able to **use** a selected move.
 
     Not be able to move if suffer from:
-        {status: freeze},
-        {status: sleep} (unless the move is 'sleep-talk' or 'snore'),
-        {status: paralysis} (w.p. 0.25),
-        {status: flinch} (need to be added to `status.py` and
-            `move_meta_ailments.csv`),
-        {status: infatuation} (w.p. 0.5),
-        {status: semi-invulnerable} (need to be added to
-            `move_meta_ailments.csv`),
-        {status: taking-in-sunlight} (need to be added) <- charge,
-        {status: withdrawing} (need to be added).
+        # XXX: finish this.
     """
 
     statuses = f.status
@@ -122,7 +119,7 @@ def is_mobile(f, m):
 
 
 def makes_hit(f1, m1, f2):
-    """Returns 1 if a move is hit else 0."""
+    """Returns True if a move is hit else False."""
 
     if 'taking-aim' in f2.status:
         # If the target has been aimed at in the previous turn, the
@@ -130,7 +127,7 @@ def makes_hit(f1, m1, f2):
         # life time of 1.
         # Moves that induce 'taking-aim' status are 'mind-reader' and
         # 'lock-on'.
-        return 1
+        return True
 
     elif 'semi-invulnerable' in f2.status:
         # XXX: best way to do this? This works.
@@ -164,20 +161,20 @@ def makes_hit(f1, m1, f2):
         else:
             # If one of the conditions above is met, skip this `else`
             # statement and go through the regular accuracy check.
-            return 0
+            return False
 
     if np.isnan(m1.accuracy):
         # I haven't found any cases where the accuracy is nan and still
         # has a chance to miss.
         # XXX do an exhaustive check on this.
-        return 1
+        return True
 
     else:
         # If the move's accuracy is not nan, use the regular hit rate
         # formula P = move's accuracy * user's accuracy / opponent's
         # evasion.
         p = m1.accuracy/100. * f1.stage_factor.accuracy/f2.stage_factor.evasion
-        return binomial(1., p)
+        return bool(binomial(1., p))
 
 
 def critical(f1, m1):
@@ -1029,6 +1026,9 @@ def mid_attack_effect(f1, m1, f2, m2):
         except KeyError:
             pass
 
+    elif effect == 112:
+        pass
+
 
 # Order, move, and item should be recorded before calling this function.
 def attack(f1, m1, f2, m2):
@@ -1089,7 +1089,7 @@ def debug(player=None, ai=None, display=True):
     Set `display` to False shut all display up.
     """
 
-    from mechanisms.core.pokemon import Trainer
+    from phanpy.core.pokemon import Trainer
 
     if not ai:
         # If the ai's pokemon is not specified, then randomize one

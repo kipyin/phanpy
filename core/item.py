@@ -8,9 +8,9 @@ Created on Mon Nov  6 18:35:24 2017
 import numpy as np
 from pandas import Series, DataFrame
 
-from mechanisms.core.status import Status
-from mechanisms.data.tables import (items, item_fling_effects,
-                                    item_flags, item_flag_map)
+from phanpy.core.status import Status
+from phanpy.data.tables import (items, item_fling_effects,
+                                item_flags, item_flag_map)
 
 
 class Item():
