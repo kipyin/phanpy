@@ -6,6 +6,15 @@ A project for **P**okémon mec**HAN**isms for **PY**thon.
 
 - [ ] `pandas`
 
+### Supporting Versions & Priorities
+
+```python
+GEN.IV >= III > V > VI == VII > I == II
+```
+
+- Finishing mechanisms for GEN.III and GEN.IV are on the top of the list.
+- GEN.IV is in favor of III when there's a conflict (or better, implement both).
+
 ### Current Status / Need-To-Do's
 - :tada: Finished building and testing for the underlying classes, i.e. `Pokemon`, `Move`, `Item`, etc.
 - :hourglass: WIP: main battle mechanisms.
