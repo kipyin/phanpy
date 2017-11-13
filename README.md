@@ -1,11 +1,21 @@
-# pokemon-battle-mechanisms
+# PhanPy![](https://cdn.bulbagarden.net/upload/3/3b/Spr_3r_231.png)
 
-The battle mechanisms for Pokémon games.
+A project for **P**okémon mec**HAN**isms for **PY**thon.
 
-Required package:
+### Required package:
 
 - [ ] `pandas`
 
-See also:
+### Current Status / Need-To-Do's
+- :tada: Finished building and testing for the underlying classes, i.e. `Pokemon`, `Move`, `Item`, etc.
+- :hourglass: WIP: main battle mechanisms.
+- :hourglass: WIP: add all moves' effects.
+- :calendar: Need to test for the main algorithms.
+- :calendar: Need to complete (and update) the documentations.
+- :thought_balloon: A better name for the project?
+    - This project is intended for *battle* mechanisms, not all mechanisms for Pokémon games (although this might be an option for the future).
+- :calendar: Need to adapt the algorithms to cover all 7 generations.
+
+### See also:
 
 [Project Overview](https://github.com/kiphub/pokemon-battle-mechanism.wiki.git)
