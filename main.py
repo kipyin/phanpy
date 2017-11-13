@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ============ Activate these codes when import fails. =============== #
-# Solution #1
+# Solution #1 (Should always work. Need to change the root path accordingly.)
 # import os
 # import sys
 #
@@ -11,11 +11,11 @@
 
 # sys.path.append(root_path) if root_path not in sys.path else None
 
-# Solution #2
+# Solution #2 (Works for top-level files.)
 # import os, sys
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Solution #3
+# Solution #3 (Works for top-level files.)
 from os import sys, path
 sys.path.append(path.abspath('.'))
 
@@ -30,23 +30,123 @@ from phanpy.core.status import Status
 import phanpy.data.tables as tb
 
 move_natural_gift = tb.move_natural_gift
+which_ability = tb.which_ability
 
-def order_of_attack(p1, p1_move, p2, p2_move):
-    """Determines the order of attack.
+def attacking_order(p1, p1_move, p2, p2_move):
+    """Determine the attacking order based on the priorities of the
+    mvoes, the speed of each pokemon, their held items, and their
+    abilities (if applicable).
 
-    # XXX: need to take effects into account, e.g.
-    trick-room, quick-claw.
+    The attacking order should comply with the following scheme:
+
+        held-items -> abilities -> moves -> field-effects -> speeds
+
+    1. held-items.
+        - ``quick-claw``: The Pokemon holding a ``quick-claw`` has a
+        20% chance to move first, ignoring the effect of ``trick-room``
+        and abilities when activated. If, on rare occasions, two
+        pokemons both hold ``quick-claw``'s, then the chance that the
+        effects are both activated is 0.04, given that both pokemons
+        hold ``quick-claw``. In this case, the effects are both ignored.
+
+        - ``full-incense`` and ``lagging-tail``: The item-holder always
+        moves last, unless both Pokemons are holding one of these items.
+        In such a case, regular priorities are considered.
+
+    2. abilities.
+        - ``stall``: The Pokemon with this ability will move last. The
+        rare situations stated above can also be applied here.
+
+        - (GEN.VI+) ``gale-wings``: This ability increases the priority
+        of Flying-type moves by one. Affected Flying-type attacks and
+        offensive status moves can be blocked by ``quick-guard``.
+        This ability does not increase the priority of Flying-type
+        ``hidden-power``, ``natural-gift``, or ``judgment``, as they
+        are treated as Normal-type moves before being used. Starting
+        from GEN.VII, ``gale-wings`` works only if the user has full HP.
+
+        - ``prankster``: This ability increases the priority of status
+        moves by one.
+        GEN.V: Any move that is increased in priority from Prankster
+        is not blocked by ``quick-guard``.
+        GEN.VI: Can be blocked by ``quick-guard`` (make up your mind,
+        Nintendo).
+        GEN.VII+: More changes, but they are not on the top of our list
+        for now.
+
+        - GEN.VII abilities: ``traige``, ``queenly-majesty``, ``dazzle``.
+
+    3. moves.
+        - All moves' priorities are recorded in ``~/data/csv/moves.csv``
+
+        - ``quick-guard``: Quick Guard protects all Pokémon on the
+        user's side of the field from moves that have increased priority
+        during that turn, such as Quick Attack or Aqua Jet.
+        It does not block moves that have been given an increased
+        priority through Prankster that would not usually have one.
+
+    4. field-effects.
+        - ``trick-room``: Trick Room reverses the move order within each
+        priority bracket so that Pokémon with a lower Speed stat attack
+        first, while those with a higher Speed stat will attack last.
+
+        - GEN.VII field-effects: move:``psychic-terrain``.
     """
 
+    if p1.item.name == 'quick-claw' and p2.item.name == 'quick-claw':
+        # If both pokemon are holding 'quick-claw', skip to the next
+        # checker.
+        pass
+
+    elif p1.item.name == 'quick-claw' and bool(binomial(1, 0.2)):
+        p1.order, p2.order = 1, 2
+        return p1, p1_move, p2, p2_move
+
+    elif p2.item.name == 'quick-claw' and bool(binomial(1, 0.2)):
+        p1.order, p2.order = 2, 1
+        return p2, p2_move, p1, p1_move
+    else:
+        pass
+
+    laggers = ['lagging-tail', 'full-incense']
+
+    # Check for laggers
+    if p1.item.name in laggers and p2.item.name in laggers:
+        pass
+
+    elif p1.item.name in laggers:
+        p1.order, p2.order = 2, 1
+        return p2, p2_move, p1, p1_move
+
+    elif p2.item.name in laggers:
+        p1.order, p2.order = 1, 2
+        return p1, p1_move, p2, p2_move
+    else:
+        pass
+
+    # Check for ability:stall.
+    if (p1.ability == which_ability('stall')
+            and p2.ability == which_ability('stall')):
+        pass
+
+    elif p1.ability == which_ability('stall'):
+        p1.order, p2.order = 2, 1
+        return p2, p2_move, p1, p1_move
+
+    elif p2.ability == which_ability('stall'):
+        p1.order, p2.order = 1, 2
+        return p1, p1_move, p2, p2_move
+    else:
+        pass
+
+    # Move on to the moves' priority check.
     if p1_move.priority > p2_move.priority:
         # If the moves' priorities are different, use the moves'
         # prioirties.
-
         p1.order, p2.order = 1, 2
         f1, f2, m1, m2 = p1, p2, p1_move, p2_move
 
     elif p1_move.priority < p2_move.priority:
-
         p1.order, p2.order = 2, 1
         f1, f2, m1, m2 = p2, p1, p2_move, p1_move
 
@@ -61,6 +161,11 @@ def order_of_attack(p1, p1_move, p2, p2_move):
 
             p1.order, p2.order = 2, 1
             f1, f2, m1, m2 = p2, p1, p2_move, p1_move
+
+        if 'trick-room' in p1.status and 'trick-room' in p2.status:
+            # If both pokemons suffer from trick-room effect, switch the
+            # priority.
+            f1, m1, f2, m2 = f2, m2, f1, m1
 
     return f1, m1, f2, m2
 
@@ -1114,7 +1219,7 @@ def debug(player=None, ai=None, display=True):
         m1 = p1.moves[randint(0, len(p1.moves))]
         m2 = p2.moves[randint(0, len(p2.moves))]
 
-        f1, m1, f2, m2 = order_of_attack(p1, m1, p2, m2)
+        f1, m1, f2, m2 = attacking_order(p1, m1, p2, m2)
 
         if display:
             print("==============================")
