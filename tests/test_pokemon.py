@@ -116,6 +116,14 @@ class TestPokemon():
         p.item = Item(303)
         assert p.stage.critical == 1.
 
+    def test_dual_abilities_successfully_initiated(self):
+        p = Pokemon(19)
+        assert p.ability in [50, 62]
+
+    def test_single_ability_successfully_initiated(self):
+        p = Pokemon(1)
+        assert p.ability == 65
+
     def test_reset_current_stats(self, setup):
         p = setup
         p.stage += 3
