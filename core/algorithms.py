@@ -1101,7 +1101,7 @@ def status_damage(f1):
         recovery = f1.stats.hp // 16.
 
         if f1.item.name == 'big-root':
-            recovery = np.f1loor(1.3 * recovery)
+            recovery = np.floor(1.3 * recovery)
 
         f1.current.hp += recovery
 
@@ -1113,7 +1113,7 @@ def status_damage(f1):
 
         damage = f1.stats.hp // 16.
 
-        if f1.item.name == 'binding-band':
+        if f2.item.name == 'binding-band':
             damage *= 2.
 
         f1.current.hp -= damage
