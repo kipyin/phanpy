@@ -7,7 +7,7 @@ import os
 import sys
 
 file_path = os.path.dirname(os.path.abspath(__file__))
-root_path = file_path.replace('/phanpy.', '')
+root_path = file_path.replace('/phanpy/core', '')
 
 sys.path.append(root_path) if root_path not in sys.path else None
 
@@ -599,15 +599,13 @@ def regular_damage(f1, m1, f2, m2):
 
         if 'embargo' not in f1.status:
 
-            f1.item.fling(f2)
+            f1.item.flingat(f2)
             # Item().fling(target) activates the fling_effect to
             # the given `target`.
             # XXX: this method is incomplete. See item.py
 
-            if f1.item.fling_power:
-                power = f1.item.fling_power
-            else:
-                power = 0
+            power = f1.item.fling.power
+
         else:
             power = 0
 
