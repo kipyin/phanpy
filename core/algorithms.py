@@ -1,5 +1,147 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+'''This file contains all the main algorithms in Pokemon battles.
+
+attacking_order(...)
+    attacking_order(pokemon1, move1, pokemon2, move2)
+
+    Determine which pokemon takes the first move in a battle.
+
+    ``move1`` and ``move2`` are ``pokemon1`` and ``pokemon2``'s
+    moves respectively.
+
+    These parameters are abbreviated to ``p1(2)`` and ``m1(2)``.
+
+
+is_mobile(...)
+    is_mobile(some_pokemon, some_move)
+
+    Check if the given pokemon is able to make a move at the beginning
+    of a turn.
+
+    Not being able to move is spossibly casued by:
+
+        - used a move require ``recharge`` in the following turn;
+        - paralyzed (with 25% chance not being able to move);
+        - freeze (unless used a move with a ``defrost`` tag);
+        - flinch (if the pokemon moves second);
+        - infatuation (50% not being able to make a move);
+        - sleep (unless use ``sleep-talk`` or ``snore``).
+
+    Returns
+    -------
+    is_mobile : bool
+
+
+makes_hit(...)
+    makes_hit(f1, m1, f2)
+    makes_hit(user_pokemon, move, target_pokemon)
+
+    Calculate if the the move user makes a hit or not.
+
+    Generally, this is done by the following formula:
+
+        p = move's accuracy * user's accuracy / target's evasion
+
+    where ``p`` is the probability of making a hit. However, there are
+    various exceptions, such as:
+
+        - if the target pokemon has a status ``taking-aim`` (caused by
+        the move ``mind-reader`` or ``lock-on``), then the move will
+        surely hit, ignoring *everything* else.
+        - if the target is ``semi-invulnerable``, i.e. if the target
+        is in the effect of the move ``fly``, ``dig``, or ``dive``,
+        then unless the move is some specific move, the user will surely
+        miss the attack.
+
+    * Note that all functions follow the convention of using ``f1`` to
+    represent the user pokemon, and ``f2`` to represent the target
+    pokemon. ``m1`` and ``m2`` are still ``f1`` and ``f2``'s moves
+    respectively.
+
+    Returns
+    -------
+    makes_hit : bool
+
+
+critical(...), stab(...), and burn(...) are damage modifiers used in
+    calculating the damage.
+
+
+base_damage(...)
+    base_damage(f1, m1, f2, m2)
+    base_damage(user_pokemon, move1, target_pokemon, move2)
+
+    a.k.a. regular damage.
+
+    Calculate the base damage of a move. If a move's base damage cannot
+    be calculated, nothing is returned.
+
+    There are two types of damages. One is the regular damage, as
+    discussed here. The other is the direct damage. This is discussed
+    in ``calculated_damage(...)``.
+
+    Most moves with set powers deal regular damages. The damage modifier
+    functions ``critica(...)``, ``stab(...)``, and ``burn(...)`` are
+    used here.
+
+    Returns
+    -------
+    base_damage : int or floored float
+        A value to be passed to ``calcualted_damage(...)``.
+
+
+calculated_damage(...)
+    calculated_damage(f1, m1, f2, m2)
+    calculated_damage(user_pokemon, move1, target_pokemon, move2)
+
+    Calculate the damage for both regular damages and direct damages.
+
+    A lot of move's effects are discussed here.
+
+    Returns
+    -------
+    damage : int or floored float
+        The actual damage caused to the target, ignoring side effects
+        such as absorption or recoil damage.
+
+
+stat_changer(...)
+    stat_changer(f1, m1, f2, m2)
+
+    If ``m1`` causes stat chagnes, apply the effect on either ``f1`` or
+    ``f2`` or both, depending on the effect. Return nothing.
+
+
+ailment_inflictor(...)
+    ailment_inflictor(f1, m1, f2, m2)
+
+    If ``m`` inflicts ailments (a.k.a. status conditions), apply the
+    effect. Return nothing.
+
+
+status_damage(...)
+    status_damage(f1, m1, f2, m2)
+
+    At the end of a turn, if a pokemon has status conditions such as
+    ``poison`` or ``burn``, apply the effect. Return nothing.
+
+
+effect(...)
+    effect(f1, m1, f2, m2)
+
+    A catch-all function for all the effects. Apply the effect of ``m1``.
+    Return nothing.
+
+
+attack(...)
+    attack(f1, m1, f2, m2)
+
+    Apply the damage to ``f2`` (if makes a hit). Apply the move's effects
+    and all the side-effects. Apply the status damage at the end.
+    Return nothing.
+
+'''
 
 # ============ Activate these codes when import fails. =============== #
 # Solution #1 (Should always work. Need to change the root path accordingly.)
@@ -223,7 +365,7 @@ def is_mobile(f, m):
 
 
 def makes_hit(f1, m1, f2):
-    """Returns True if a move is hit else False."""
+    """Calculate if the the move user makes a hit or not."""
 
     if 'taking-aim' in f2.status:
         # If the target has been aimed at in the previous turn, the
@@ -330,8 +472,8 @@ def burn(f1, m1):
         return 1
 
 
-def regular_damage(f1, m1, f2, m2):
-    """Retuns the damage for all moves deals regular damage.
+def base_damage(f1, m1, f2, m2):
+    """Return the damage for all moves deals regular damage.
     """
     effect = m1.effect_id
 
@@ -733,7 +875,7 @@ def regular_damage(f1, m1, f2, m2):
 
 
 def calculate_damage(f1, m1, f2, m2):
-    """Calculates the damage including the moves dealing direct damages
+    """Calculate the damage including the moves dealing direct damages
     and regular damages.
     """
     effect = m1.effect_id
@@ -906,7 +1048,7 @@ def stat_changer(f1, m1, f2, m2):
         whose_stat(f2)
 
 
-def inflict_ailment(f1, m1, f2, m2):
+def ailment_inflictor(f1, m1, f2, m2):
     """Inflicts ailment to the selected target."""
 
     ailment_id = m1.meta_ailment_id
@@ -941,11 +1083,12 @@ def inflict_ailment(f1, m1, f2, m2):
             f2.status += ailment
 
 
-def ailment_damage(f1, m1, f2, m2):  # 'post-attack' damage
+def status_damage(f1):
     """Takes the damage if the pokemon has certain statuses. The damage
     is effect **at the end of the turn**.
-
     """
+    # XXX: add berries effects
+
     if 'burn' in f1.status and f1.ability != 'guts':
         f1.current.hp -= f1.stats.hp // 8.
 
@@ -958,7 +1101,7 @@ def ailment_damage(f1, m1, f2, m2):  # 'post-attack' damage
         recovery = f1.stats.hp // 16.
 
         if f1.item.name == 'big-root':
-            recovery = np.floor(1.3 * recovery)
+            recovery = np.f1loor(1.3 * recovery)
 
         f1.current.hp += recovery
 
@@ -970,13 +1113,13 @@ def ailment_damage(f1, m1, f2, m2):  # 'post-attack' damage
 
         damage = f1.stats.hp // 16.
 
-        if f2.item.name == 'binding-band':
+        if f1.item.name == 'binding-band':
             damage *= 2.
 
         f1.current.hp -= damage
 
 
-def mid_attack_effect(f1, m1, f2, m2):
+def effect(f1, m1, f2, m2):
     """Activates m1's effect if it is a unique effect.
 
     Exceptions
@@ -1009,7 +1152,7 @@ def mid_attack_effect(f1, m1, f2, m2):
 
     if m1.meta_category_id in[1, 5]:
         # moves that inflicts status conditions.
-        inflict_ailment(f1, m1, f2, m2)
+        ailment_inflictor(f1, m1, f2, m2)
 
     if effect == 26:
         # Removes [stat]{mechanic:stat}, [accuracy]{mechanic:accuracy},
@@ -1132,7 +1275,7 @@ def mid_attack_effect(f1, m1, f2, m2):
         pass
 
 
-# Order, move, and item should be recorded before calling this function.
+# Order, move, and item should be determined before calling this function.
 def attack(f1, m1, f2, m2):
     """f1 uses m1 to attack f2.
 
@@ -1165,98 +1308,22 @@ def attack(f1, m1, f2, m2):
                 damage *= 0.5
 
             f2.current.hp -= damage
-            f2.history.damage.appendleft(damage)
-
             # if this number is negative, then the move heals the
             # opponent.
 
+            f2.history.damage.appendleft(damage)
+
             if not np.isnan(m1.drain):
                 # A negative drain means a recoil damage.
-                # A positive drain means absoring from the opponent.
+                # A positive drain means absorbing from the opponent.
                 f1.current.hp += m1.drain * damage // 100.
         else:
             # Append 0 if no damage is dealt.
             f2.history.damage.appendleft(0)
 
-        mid_attack_effect(f1, m1, f2, m2)
-
+        effect(f1, m1, f2, m2)
         m1.pp -= 1
+        status_damage(f1)
+
     else:
         pass
-
-
-def debug(player=None, ai=None, display=True):
-    """A quick prototype that simulates a battle. `player` and `ai` are
-    both Trainer objects.
-    Set `display` to False shut all display up.
-    """
-
-    from phanpy.core.pokemon import Trainer
-
-    if not ai:
-        # If the ai's pokemon is not specified, then randomize one
-        ai = Trainer('Shigeru')
-
-    if not player:
-        player = Trainer('Satoshi')
-
-    p1 = player.party(1)
-    p2 = ai.party(1)
-
-    if display:
-        for (u, p) in zip([player, ai], [p1, p2]):
-            print("{} chooses No.{} {}!\n".format(u.name, p.id, p.name),
-                  "{}'s hp: {}\n".format(p.name, p.stats.hp))
-
-    end = False
-
-    turn = 1
-
-    while not end:
-        m1 = p1.moves[randint(0, len(p1.moves))]
-        m2 = p2.moves[randint(0, len(p2.moves))]
-
-        f1, m1, f2, m2 = attacking_order(p1, m1, p2, m2)
-
-        if display:
-            print("==============================")
-
-        for (f, m, g, n) in zip([f1, f2], [m1, m2], [f2, f1], [m2, m1]):
-
-            if is_mobile(f, m):
-                if display:
-                    print("{} uses {}!\n".format(f.name, m.name))
-                    print("The move {}'s info:\n"
-                          "Power: {}, Accuracy: {}\n".format(m.name,
-                                                             m.power,
-                                                             m.accuracy))
-                attack(f, m, g, n)
-                ailment_damage(f, m, g, n)
-                # print(g.history)
-                if display:
-                    print("{}'s hp: {}\n"
-                          "{}'s hp: {}\n".format(f.name, f.current.hp,
-                                                 g.name, g.current.hp))
-            elif display:
-                print("{} cannot use the move!\n".format(f.name))
-                continue
-
-            if f2.current.hp <= 0 or f1.current.hp <= 0:
-                # 0 indicates that one side is fainting and the current
-                # round is ended.
-                if display:
-                    print("The battle has ended")
-                end = True
-                break
-
-        f1.status.reduce()
-        f1.status.reduce()
-        turn += 1
-
-
-def test(n, d=True):
-    for i in range(n):
-        debug(display=d)
-
-
-# test(10, False)
