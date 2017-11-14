@@ -27,4 +27,4 @@ GEN.IV >= III > V > VI == VII > I == II
 
 ### See also:
 
-[Project Overview](https://github.com/kiphub/pokemon-battle-mechanism.wiki.git)
+[Project Overview](https://github.com/kiphub/phanpy/wiki/Project-Overview)
