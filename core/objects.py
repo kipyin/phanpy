@@ -396,11 +396,12 @@ class Item():
         return self.name
 
     def flingat(self, other):
-        """"Flings the item to the opponent.
-        Activates the item's effect.
+        """"Fling the item to the opponent.
+
+        Activate the item's effect.
         """
 
-        fling_id = self.fling_effect.id
+        fling_id = self.fling.effect_id
 
         if fling_id == 1:
             other.status += Status('badly-poison')
