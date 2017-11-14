@@ -3,31 +3,30 @@
 
 # ============ Activate these codes when import fails. =============== #
 # Solution #1 (Should always work. Need to change the root path accordingly.)
-# import os
-# import sys
-#
-# file_path = os.path.dirname(os.path.abspath(__file__))
-# root_path = file_path.replace('/phanpy., '')
+import os
+import sys
 
-# sys.path.append(root_path) if root_path not in sys.path else None
+file_path = os.path.dirname(os.path.abspath(__file__))
+root_path = file_path.replace('/phanpy.', '')
+
+sys.path.append(root_path) if root_path not in sys.path else None
 
 # Solution #2 (Works for top-level files.)
 # import os, sys
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Solution #3 (Works for top-level files.)
-from os import sys, path
-sys.path.append(path.abspath('.'))
+# from os import sys, path
+# sys.path.append(path.abspath('.'))
 
 from collections import deque
 from functools import reduce
 import numpy as np
 from numpy.random import binomial, uniform, randint, choice
 
-from phanpy.core.helpers import efficacy
-from phanpy.core.item import Item
-from phanpy.core.status import Status
-import phanpy.data.tables as tb
+from phanpy.core.tables import efficacy
+from phanpy.core.objects import Item, Status
+import phanpy.core.tables as tb
 
 move_natural_gift = tb.move_natural_gift
 which_ability = tb.which_ability
