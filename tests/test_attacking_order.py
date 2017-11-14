@@ -8,12 +8,9 @@ file_path = os.path.dirname(os.path.abspath(__file__))
 root_path = file_path.replace('/phanpy/tests', '')
 sys.path.append(root_path) if root_path not in sys.path else None
 
-from phanpy.core.move import Move
-from phanpy.core.pokemon import Pokemon
-from phanpy.core.item import Item
-from phanpy.core.status import Status
-from phanpy.data.tables import which_ability
-from phanpy.main import attacking_order
+from phanpy.core.objects import Item, Move, Pokemon, Status
+from phanpy.core.tables import which_ability
+from phanpy.core.algorithms import attacking_order
 
 
 def test_compare_priorities():

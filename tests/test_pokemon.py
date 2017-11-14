@@ -8,9 +8,7 @@ root_path = file_path.replace('/phanpy/tests', '')
 sys.path.append(root_path) if root_path not in sys.path else None
 
 import numpy as np
-from phanpy.core.pokemon import Pokemon, Trainer
-from phanpy.core.move import Move
-from phanpy.core.item import Item
+from phanpy.core.objects import Move, Item, Pokemon, Trainer
 
 @pytest.fixture(scope='function')
 def setup():
