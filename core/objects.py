@@ -739,17 +739,16 @@ class Pokemon():
         # A Pokemon defaults to learn the last 4 learnable moves at its
         # current level.
         condition = ((tb.pokemon_moves["pokemon_id"] == self.id) &
-                     (tb.pokemon_moves["pokemon_move_method_id"] == 1) &
                      (tb.pokemon_moves.level < self.level + 1))
 
-        all_moves = tb.pokemon_moves[condition]["move_id"]
+        self._all_moves = tb.pokemon_moves[condition]["move_id"].values
 
         num_of_moves = np.clip(a=4,
-                               a_max=len(all_moves),
+                               a_max=len(self._all_moves),
                                a_min=1)
 
         _default_moves = ([Move(x) for x in
-                          np.random.choice(all_moves.values,
+                          np.random.choice(self._all_moves,
                                            size=num_of_moves,
                                            replace=False)])
 
