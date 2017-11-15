@@ -6,6 +6,13 @@ A project for **P**okémon mec**HAN**isms for **PY**thon.
 
 - [ ] `pandas`
 
+### How To Use
+
+Just run `interface.py` and follow the instructions.
+```console
+$ python interface.py
+```
+
 ### Supporting Versions & Priorities
 
 ```python
