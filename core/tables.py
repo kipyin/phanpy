@@ -27,21 +27,21 @@ def which_version(identifier=None,
 
     Usage
     -----
-        >>> VERSION_GROUP_ID, REGION_ID, VERSION_ID =
-        ...     which_version('firered')
-        >>> print(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
-        (7, 1, 10)
+    >>> VERSION_GROUP_ID, REGION_ID, VERSION_ID =
+    ...     which_version('firered')
+    >>> print(VERSION_GROUP_ID, REGION_ID, VERSION_ID)
+    (7, 1, 10)
 
     Parameters
     ----------
-        identifier : str
-            The official name of a game; should be in the following
-            list:
-            red, blue, yellow, gold, silver, crystal,
-            ruby, sapphire, emerald, firered, leafgreen,
-            diamond, pearl, platinum, heartgold, soulsilver,
-            black, white, black-2, white-2,
-            x, y, omega-ruby, alpha-sapphire, sun, moon,
+    identifier : str
+        The official name of a game; should be in the following
+        list:
+        red, blue, yellow, gold, silver, crystal,
+        ruby, sapphire, emerald, firered, leafgreen,
+        diamond, pearl, platinum, heartgold, soulsilver,
+        black, white, black-2, white-2,
+        x, y, omega-ruby, alpha-sapphire, sun, moon,
 
     """
 
@@ -159,6 +159,12 @@ with open(path + 'moves.csv') as csv_file:
 
     __condition = moves["generation_id"] <= REGION_ID
     moves = moves[__condition]
+
+with open(path + 'move_effect_prose.csv') as csv_file:
+    move_effect_prose = read_csv(csv_file)
+
+with open(path + 'move_flavor_text.csv') as csv_file:
+    move_flavor_text = read_csv(csv_file)
 
 with open(path + 'move_meta.csv') as csv_file:
     move_meta = read_csv(csv_file)
