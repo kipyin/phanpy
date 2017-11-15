@@ -13,132 +13,133 @@ from phanpy.core.tables import which_ability
 from phanpy.core.algorithms import attacking_order
 
 
-def test_compare_priorities():
-    """quick-attack is of priority +1 and snatch is of priority +4.
-    snatch will attack first.
-    """
+class TestAttackingOrder():
 
-    p1 = Pokemon(123)
-    p2 = Pokemon(345)
+    def test_compare_priorities(self):
+        """quick-attack is of priority +1 and snatch is of priority +4.
+        snatch will attack first.
+        """
 
-    p1.moves[1] = Move('quick-attack')
-    p2.moves[1] = Move('snatch')
+        p1 = Pokemon(123)
+        p2 = Pokemon(345)
 
-    p1_move = p1.moves[1]
-    p2_move = p2.moves[1]
+        p1.moves[1] = Move('quick-attack')
+        p2.moves[1] = Move('snatch')
 
-    p1.stage.speed = 6
-    p2.stage.speed = -6
+        p1_move = p1.moves[1]
+        p2_move = p2.moves[1]
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        p1.stage.speed = 6
+        p2.stage.speed = -6
 
-    assert p1.current.speed > p2.current.speed
-    assert p2 == f1
-    assert p1 == f2
-    assert p1.order == 2
-    assert p2.order == 1
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
-def test_same_priority_faster_attacks_first():
-    """If both pokemon use moves with the same priority (regardless of
-    the level of the priority), their speeds are compared.
-    """
+        assert p1.current.speed > p2.current.speed
+        assert p2 == f1
+        assert p1 == f2
+        assert p1.order == 2
+        assert p2.order == 1
 
-    p1 = Pokemon('shuckle')  # has the lowest speed among all.
-    p2 = Pokemon('deoxys-speed') # has the highest speed.
-    p1.ability, p2.ability = 1, 1  # ``stench``
+    def test_same_priority_faster_attacks_first(self):
+        """If both pokemon use moves with the same priority (regardless of
+        the level of the priority), their speeds are compared.
+        """
 
-    p1.moves[1] = Move('snatch')
-    p2.moves[1] = Move('snatch')
+        p1 = Pokemon('shuckle')  # has the lowest speed among all.
+        p2 = Pokemon('deoxys-speed') # has the highest speed.
+        p1.ability, p2.ability = 1, 1  # ``stench``
 
-    p1_move = p1.moves[1]
-    p2_move = p2.moves[1]
+        p1.moves[1] = Move('snatch')
+        p2.moves[1] = Move('snatch')
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        p1_move = p1.moves[1]
+        p2_move = p2.moves[1]
 
-    assert p1.current.speed < p2.current.speed
-    assert p2 == f1
-    assert p1 == f2
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
-def test_both_holding_quick_claw_pass():
-    """Assign the same item for both shuckle and deoxys-speed form.
-    The result should be identical to the """
-    p1 = Pokemon('shuckle')
-    p2 = Pokemon('deoxys-speed')
-    p1.ability, p2.ability = 1, 1
+        assert p1.current.speed < p2.current.speed
+        assert p2 == f1
+        assert p1 == f2
 
-    p1.moves[1] = Move('snatch')
-    p2.moves[1] = Move('snatch')
+    def test_both_holding_quick_claw_pass(self):
+        """Assign the same item for both shuckle and deoxys-speed form.
+        The result should be identical to the """
+        p1 = Pokemon('shuckle')
+        p2 = Pokemon('deoxys-speed')
+        p1.ability, p2.ability = 1, 1
 
-    p1_move = p1.moves[1]
-    p2_move = p2.moves[1]
+        p1.moves[1] = Move('snatch')
+        p2.moves[1] = Move('snatch')
 
-    p1.item = Item('quick-claw')
-    p2.item = Item('quick-claw')
+        p1_move = p1.moves[1]
+        p2_move = p2.moves[1]
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        p1.item = Item('quick-claw')
+        p2.item = Item('quick-claw')
 
-    assert p2 == f1
-    assert p1 == f2
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
-def test_holding_lagging_tail_moves_last():
-    p1 = Pokemon('shuckle')
-    p2 = Pokemon('deoxys-speed')
-    p1.ability, p2.ability = 1, 1
+        assert p2 == f1
+        assert p1 == f2
 
-    p1.moves[1], p2.moves[1] = Move('snatch'), Move('snatch')
+    def test_holding_lagging_tail_moves_last(self):
+        p1 = Pokemon('shuckle')
+        p2 = Pokemon('deoxys-speed')
+        p1.ability, p2.ability = 1, 1
 
-    p1_move, p2_move = p1.moves[1], p2.moves[1]
+        p1.moves[1], p2.moves[1] = Move('snatch'), Move('snatch')
 
-    p1.item = Item(0)
-    p2.item = Item('lagging-tail')
+        p1_move, p2_move = p1.moves[1], p2.moves[1]
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        p1.item = Item(0)
+        p2.item = Item('lagging-tail')
 
-    assert p1 == f1
-    assert p2 == f2
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
-def test_pokemon_with_stall_ability_moves_last():
-    p1 = Pokemon('shuckle')
-    p2 = Pokemon('deoxys-speed')
+        assert p1 == f1
+        assert p2 == f2
 
-    p1.ability = 1
-    p2.ability = which_ability('stall')
+    def test_pokemon_with_stall_ability_moves_last(self):
+        p1 = Pokemon('shuckle')
+        p2 = Pokemon('deoxys-speed')
 
-    p1_move, p2_move = Move('snatch'), Move('snatch')
+        p1.ability = 1
+        p2.ability = which_ability('stall')
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        p1_move, p2_move = Move('snatch'), Move('snatch')
 
-    assert p1 == f1
-    assert p2 == f2
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
-def test_ability_override_field_effects():
-    p1 = Pokemon('shuckle')
-    p2 = Pokemon('deoxys-speed')
+        assert p1 == f1
+        assert p2 == f2
 
-    p1.ability = which_ability('stall')
-    p2.ability = 1
+    def test_ability_override_field_effects(self):
+        p1 = Pokemon('shuckle')
+        p2 = Pokemon('deoxys-speed')
 
-    p1_move, p2_move = Move('snatch'), Move('snatch')
+        p1.ability = which_ability('stall')
+        p2.ability = 1
 
-    p1.status += Status('trick-room')
-    p2.status += Status('trick-room')
+        p1_move, p2_move = Move('snatch'), Move('snatch')
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        p1.status += Status('trick-room')
+        p2.status += Status('trick-room')
 
-    assert p1 == f2
-    assert p2 == f1
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
+        assert p1 == f2
+        assert p2 == f1
 
-def test_trick_room_reverses_the_order():
-    p1 = Pokemon('shuckle')
-    p2 = Pokemon('deoxys-speed')
+    def test_trick_room_reverses_the_order(self):
+        p1 = Pokemon('shuckle')
+        p2 = Pokemon('deoxys-speed')
 
-    p1_move, p2_move = Move('snatch'), Move('snatch')
+        p1_move, p2_move = Move('snatch'), Move('snatch')
 
-    p1.status += Status('trick-room', 5)
-    p2.status += Status('trick-room', 5)
+        p1.status += Status('trick-room', 5)
+        p2.status += Status('trick-room', 5)
 
-    f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
+        f1, m1, f2, m2 = attacking_order(p1, p1_move, p2, p2_move)
 
-    assert p1 == f1
-    assert p2 == f2
+        assert p1 == f1
+        assert p2 == f2
