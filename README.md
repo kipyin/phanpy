@@ -1,6 +1,6 @@
-# PhanPy![](https://cdn.bulbagarden.net/upload/3/3b/Spr_3r_231.png)
+# phanpy
 
-A project for **P**okémon mec**HAN**isms for **PY**thon.
+A project for **P**okémon mec**HAN**isms for **PY**thon. ![](https://cdn.bulbagarden.net/upload/3/3b/Spr_3r_231.png)
 
 ### Required package:
 
