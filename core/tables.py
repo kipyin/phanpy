@@ -10,6 +10,7 @@ import os
 from collections import namedtuple
 from functools import reduce
 from pandas import read_csv
+import warnings
 
 FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 ROOT_PATH = FILE_PATH.replace('/core', '')
@@ -52,19 +53,19 @@ def which_version(identifier=None,
     with open(DATA_PATH + 'versions.csv') as csv_file:
         versions = read_csv(csv_file)
 
-    __vgr = version_group_regions
+    vgr = version_group_regions
 
     if identifier:
         try:
 
-            __filter = versions["identifier"] == identifier
-            VERSION_GROUP_ID = int(versions[__filter]["version_group_id"])
+            filter = versions["identifier"] == identifier
+            VERSION_GROUP_ID = int(versions[filter]["version_group_id"])
 
-            __filter = versions["identifier"] == identifier
-            VERSION_ID = int(versions[__filter]["id"])
+            filter = versions["identifier"] == identifier
+            VERSION_ID = int(versions[filter]["id"])
 
-            __filter = __vgr["version_group_id"] == int(VERSION_GROUP_ID)
-            REGION_ID = int(__vgr[__filter]["region_id"])
+            filter = vgr["version_group_id"] == int(VERSION_GROUP_ID)
+            REGION_ID = int(vgr[filter]["region_id"])
 
         except Exception:
 
@@ -81,11 +82,11 @@ def which_version(identifier=None,
     elif VERSION_GROUP_ID:
         try:
 
-            __filter = __vgr["version_group_id"] == int(VERSION_GROUP_ID)
-            REGION_ID = int(__vgr[__filter]["region_id"])
+            filter = vgr["version_group_id"] == int(VERSION_GROUP_ID)
+            REGION_ID = int(vgr[filter]["region_id"])
 
-            __filter = versions["version_group_id"] == VERSION_GROUP_ID
-            VERSION_ID = int(versions[__filter]["id"])
+            filter = versions["version_group_id"] == VERSION_GROUP_ID
+            VERSION_ID = int(versions[filter]["id"])
 
         except Exception:
 
@@ -94,11 +95,11 @@ def which_version(identifier=None,
     elif REGION_ID:
         try:
 
-            __filter = __vgr["region_id"] == int(REGION_ID)
-            VERSION_GROUP_ID = int(__vgr[__filter]["version_group_id"])
+            filter = vgr["region_id"] == int(REGION_ID)
+            VERSION_GROUP_ID = int(vgr[filter]["version_group_id"])
 
-            __filter = versions["version_group_id"] == VERSION_GROUP_ID
-            VERSION_ID = int(versions[__filter]["id"])
+            filter = versions["version_group_id"] == VERSION_GROUP_ID
+            VERSION_ID = int(versions[filter]["id"])
 
         except Exception:
 
@@ -107,11 +108,11 @@ def which_version(identifier=None,
     elif VERSION_ID:
         try:
 
-            __filter = versions["id"] == VERSION_ID
-            VERSION_GROUP_ID = int(versions[__filter]["version_group_id"])
+            filter = versions["id"] == VERSION_ID
+            VERSION_GROUP_ID = int(versions[filter]["version_group_id"])
 
-            __filter = __vgr["version_group_id"] == VERSION_GROUP_ID
-            REGION_ID = __vgr[__filter]["region_id"]
+            filter = vgr["version_group_id"] == VERSION_GROUP_ID
+            REGION_ID = vgr[filter]["region_id"]
 
         except Exception:
 
@@ -133,6 +134,31 @@ def which_version(identifier=None,
 
 VERSION_GROUP_ID, REGION_ID, VERSION_ID = which_version('platinum')
 
+
+# --------------------------- Helper Funcs --------------------------- #
+
+def sub(table, col, val, op='=='):
+    """Return a subset of the table by the condition
+
+            tables[column] == val
+
+    as a list.
+
+    Parameters
+    ----------
+    table : DataFrame
+    col : str, must be in table.columns.values
+    val : anything
+    op : str, {'==', '<', '>', '<=', '>=', '!='}
+    """
+
+    condition = eval('tables[col] {0} val'.format(op))
+    sub = table[condition].values
+
+    if len(sub) == 0:
+        warnings.warn("The subset has no content.", Warning)
+
+    return sub
 
 # ------------------------- All Other Files -------------------------- #
 
@@ -157,8 +183,8 @@ with open(path + 'item_fling_effects.csv') as csv_file:
 with open(path + 'moves.csv') as csv_file:
     moves = read_csv(csv_file)
 
-    __condition = moves["generation_id"] <= REGION_ID
-    moves = moves[__condition]
+    subset = sub(moves, "id", 9999, '<=')
+    moves = sub(subset, "generation_id", REGION_ID, '<=')
 
 with open(path + 'move_effect_prose.csv') as csv_file:
     move_effect_prose = read_csv(csv_file)
@@ -184,8 +210,8 @@ with open(path + 'pokemon_abilities.csv') as csv_file:
 with open(path + 'pokemon_moves.csv') as csv_file:
     pokemon_moves = read_csv(csv_file)
 
-    __condition = pokemon_moves["version_group_id"] == VERSION_GROUP_ID
-    pokemon_moves = pokemon_moves[__condition]
+    condition = pokemon_moves["version_group_id"] == VERSION_GROUP_ID
+    pokemon_moves = pokemon_moves[condition]
 
 with open(path + 'pokemon_species.csv') as csv_file:
     pokemon_species = read_csv(csv_file)
@@ -276,6 +302,6 @@ def efficacy(atk_type, tar_types):
 
     """
 
-    __efficacies = map(lambda x: type_efficacy[atk_type-1, x-1], tar_types)
+    efficacies = map(lambda x: type_efficacy[atk_type-1, x-1], tar_types)
 
-    return reduce(lambda x, y: x * y, __efficacies)
+    return reduce(lambda x, y: x * y, efficacies)
