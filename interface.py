@@ -71,17 +71,17 @@ def config():
     lang = 9
 
     # Game selection
-    which_game = safe_input("Select a game:\n[1]. Ruby/Sapphire/Emerald\n2. "
-                            "FireRed/LeafGreen\n3. Diamond/Pearl/Platinum\n"
+    which_game = safe_input("Select a game:\n[1]. FireRed/LeafGreen\n2. "
+                            "Ruby/Sapphire/Emerald\n3. Diamond/Pearl/Platinum\n"
                             ">>> ", ['1', '2', '3'])
 
     if which_game == '1':
-        max_index = 386
-        game_name = 'emerald'
-
-    elif which_game == '2':
         max_index = 151
         game_name = 'firered'
+
+    elif which_game == '2':
+        max_index = 386
+        game_name = 'emerald'
 
     elif which_game in ['3']:
         max_index = 493
@@ -142,11 +142,13 @@ def config():
     # When a Pokémon is instantiated, a random set of moves have already
     # been assigned. Choosing 'no' here will override these moves.
     random_moves = safe_input("Automatically assign moves for {0.name}"
-                              "([y]/n)? ".format(user))
+                              " ([y]/n)? ".format(user))
 
     if random_moves == 'n':
         # If 'no' is chosen, present all learnable moves to the user,
         # and let the user manually set each move.
+
+        print("Moves will be set manually.")
 
         template = "\n{:^5}|{:^15}|{:^6}|{:^6}|{:^40}"
 
@@ -168,20 +170,23 @@ def config():
 
         # ordinal(n) converts a number to its ordinal form.
         # i.e. ordinal(1) == '1st', ordinal(2) == '2nd', etc.
+        # Copied from https://stackoverflow.com/a/20007730/8902117
         ordinal = lambda n: "%d%s" % (n,"tsnrhtdd"[(n/10%10!=1)*(n%10<4)*n%10::4])
 
         move_list = []
 
         for i in range(1, 5):
-            # Set moves.
+            # Set moves from the presented list.
             options = list(map(str, user._all_moves))
             move_id = safe_input("Set the {0} move: "
-                                 "".format(ordinal(i)), options)
+                                 "".format(ordinal(i)),
+                                 options)
 
             while int(move_id) in move_list:
                 move_id = safe_input("{0.name} already knows {1.name} ({1.id})!\n"
                                      "Set the {0} move: "
-                                     "".format(ordinal(i), ob.Move(int(move_id))), options)
+                                     "".format(ordinal(i), ob.Move(int(move_id))),
+                                     options)
 
             move_list.append(int(move_id))
 
@@ -191,7 +196,45 @@ def config():
         for i in range(4):
             user.moves[i] = ob.Move(move_list[i])
 
+    return user, op
+
+
 config()
+
+
+def battle():
+    """Simulate a battle."""
+
+    user, op = config()
+
+    def on_display(user, op):
+        """Return a formatted string which contains the user's and the
+        opponent's HP.
+        """
+        return "No.{0.id} {0.name}'s HP: {0.current.hp} / {0.stats.hp}\n"
+               "No.{1.id} {0.name}'s HP: {1.current.hp} / {1.stats.hp}"
+               "".format(user, op)
+
+    auto_battle = safe_input("Battle automatically ([y]/n)? ")
+
+    if auto_battle == 'y':
+        print("Auto-battle enabled.")
+
+    elif auto_battle == 'n':
+        print("Auto-battle disabled.")
+
+        print(on_display(user, op))
+
+        menu_option = safe_input("Options:\n"
+                                 "[0]. Fight\n"
+                                 " 1. Pokémon\n"
+                                 " 2. Bag (WIP)\n"
+                                 " 3. Run (WIP)\n"
+                                 ">>> ",
+                                 options=['0', '1'])
+
+        if menu_option == '0':
+
 
 
 # This is a script I copied from the original 'main.py'
