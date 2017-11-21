@@ -6,7 +6,8 @@ Currently only support 1-on-1 battle, and the Pokémons are limited
 to Generation 3 & 4.
 """
 
-from os import sys, path
+from collections import OrderedDict
+from os import path, sys, system
 file_path = path.dirname(path.abspath(__file__))
 root_path = file_path.replace('/phanpy', '')
 sys.path.append(root_path) if root_path not in sys.path else None
@@ -68,11 +69,15 @@ def safe_input(msg, options=['y', 'n'], default=None):
 def config():
     """"Simulates a single round of game."""
 
+    # load configuration?
+
     lang = 9
 
     # Game selection
-    which_game = safe_input("Select a game:\n[1]. FireRed/LeafGreen\n2. "
-                            "Ruby/Sapphire/Emerald\n3. Diamond/Pearl/Platinum\n"
+    which_game = safe_input("Select a game:\n"
+                            "[1]. FireRed/LeafGreen\n"
+                            " 2 . Ruby/Sapphire/Emerald\n"
+                            " 3 . Diamond/Pearl/Platinum\n"
                             ">>> ", ['1', '2', '3'])
 
     if which_game == '1':
@@ -90,6 +95,7 @@ def config():
     tb.VERSION_GROUP_ID, tb.REGION_ID, tb.VERSION_ID = tb.which_version(game_name)
 
     # Pick a pokemon.
+    # XXX: Pick opponent's pokemon
     random_pokemon = safe_input("Randomly select a Pokémon ([y]/n)? ")
 
     if random_pokemon == 'y':
@@ -119,7 +125,7 @@ def config():
                     user = ob.Pokemon(which_pokemon)
 
                 # Give the user the option to confirm the choice.
-                confirm = safe_input("Choose No.{0.id} {0.name} ([y]/n)? ")
+                confirm = safe_input("Choose No.{0.id} {0.name} ([y]/n)? ".format(user))
 
                 if confirm == 'y':
                     break
@@ -183,9 +189,9 @@ def config():
                                  options)
 
             while int(move_id) in move_list:
-                move_id = safe_input("{0.name} already knows {1.name} ({1.id})!\n"
+                move_id = safe_input("{2.name} already knows {1.name} ({1.id})!\n"
                                      "Set the {0} move: "
-                                     "".format(ordinal(i), ob.Move(int(move_id))),
+                                     "".format(ordinal(i), ob.Move(int(move_id)), user),
                                      options)
 
             move_list.append(int(move_id))
@@ -196,10 +202,12 @@ def config():
         for i in range(4):
             user.moves[i] = ob.Move(move_list[i])
 
+    op = ob.Pokemon(np.random.randint(1, max_index + 1))
+
+    # Save this configuration?
+
+
     return user, op
-
-
-config()
 
 
 def battle():
@@ -207,13 +215,72 @@ def battle():
 
     user, op = config()
 
+    def fight():
+        """Fight"""
+
+        choice = None
+
+        while choice != 'q':
+
+            print("Enter 'q' to go back.")
+
+            for i, move in enumerate(user.moves, 1):
+                print("{0} | {1.name:^20} | {1.power:^5} | {1.pp:^4} | {1.type:^2}".format(i, move))
+
+            choice = input("Which move? ")
+
+            if choice in [str(x) for x in range(1, len(user.moves)+1)]:
+                choice = int(choice)
+                user_move = user.moves[choice-1]
+                break
+
+            else:
+                print("Invalid move. Choose again.")
+
+        # Pick a move for the opponent, and run the main algorithm.
+        op_move = op.moves[np.random.randint(len(op.moves))]
+
+        f1, m1, f2, m2 = al.attacking_order(user, user_move, op, op_move)
+
+        for (f, m, g, n) in zip([f1, f2], [m1, m2], [f2, f1], [m2, m1]):
+
+            if al.is_mobile(f, m):
+                print("{} uses {}!".format(f.name, m.name))
+                al.attack(f, m, g, n)
+
+        f1.status.reduce()
+        f2.status.reduce()
+
+    def switch():
+        """Switch"""
+        pass
+
+    def bag():
+        """Bag"""
+        pass
+
+    def run():
+        """Run"""
+        pass
+
+
+    menu = OrderedDict([
+        ('f', fight),
+        ('s', switch),
+        ('b', bag),
+        ('r', run)
+    ])
+
     def on_display(user, op):
         """Return a formatted string which contains the user's and the
         opponent's HP.
+
         """
-        return "No.{0.id} {0.name}'s HP: {0.current.hp} / {0.stats.hp}\n"
-               "No.{1.id} {0.name}'s HP: {1.current.hp} / {1.stats.hp}"
-               "".format(user, op)
+        display = ("User:     [{0.status}] No.{0.id} {0.name}'s HP: {0.current.hp} / {0.stats.hp}\n"
+                   "Opponent: [{1.status}] No.{1.id} {1.name}'s HP: {1.current.hp} / {1.stats.hp}"
+                   "".format(user, op))
+
+        return display
 
     auto_battle = safe_input("Battle automatically ([y]/n)? ")
 
@@ -223,21 +290,25 @@ def battle():
     elif auto_battle == 'n':
         print("Auto-battle disabled.")
 
-        print(on_display(user, op))
+        choice = None
+        while choice != 'q':
 
-        menu_option = safe_input("Options:\n"
-                                 "[0]. Fight\n"
-                                 " 1. Pokémon\n"
-                                 " 2. Bag (WIP)\n"
-                                 " 3. Run (WIP)\n"
-                                 ">>> ",
-                                 options=['0', '1'])
+            print(on_display(user, op))
+            print("Enter 'q' to quit.")
 
-        if menu_option == '0':
+            for key, value in menu.items():
+                print('{}) {}'.format(key, value.__doc__))
+
+            choice = input('Action: ').lower().strip()
+
+            if choice in menu:
+                menu[choice]()
+
+battle()
 
 
 
-# This is a script I copied from the original 'main.py'
+# This is a script I copied from the original 'main.py' as a reference
 def debug(player=None, ai=None, display=True):
     """A quick prototype that simulates a battle. `player` and `ai` are
     both Trainer objects.
