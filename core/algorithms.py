@@ -963,7 +963,7 @@ def calculate_damage(f1, m1, f2, m2):
         damage = 0
         for pokemon in f1.trainer.party():
             if pokemon.status.volatile.all():
-                damage += regular_damage(pokemon, m1, f2, m2)
+                damage += base_damage(pokemon, m1, f2, m2)
         return damage
 
     elif effect == 190:
@@ -1001,7 +1001,7 @@ def calculate_damage(f1, m1, f2, m2):
 
     else:
         # All cases up to Gen.5 should be covered.
-        return regular_damage(f1, m1, f2, m2)
+        return base_damage(f1, m1, f2, m2)
 
 
 def stat_changer(f1, m1, f2, m2):
