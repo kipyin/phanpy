@@ -152,7 +152,7 @@ def sub(table, col, val, op='=='):
     op : str, {'==', '<', '>', '<=', '>=', '!='}
     """
 
-    condition = eval('tables[col] {0} val'.format(op))
+    condition = eval('table[col] {0} val'.format(op))
     sub = table[condition].values
 
     if len(sub) == 0:
@@ -184,7 +184,7 @@ with open(path + 'moves.csv') as csv_file:
     moves = read_csv(csv_file)
 
     subset = sub(moves, "id", 9999, '<=')
-    moves = sub(subset, "generation_id", REGION_ID, '<=')
+    # moves = sub(subset, "generation_id", REGION_ID, '<=')
 
 with open(path + 'move_effect_prose.csv') as csv_file:
     move_effect_prose = read_csv(csv_file)
