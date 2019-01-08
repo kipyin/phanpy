@@ -1,4 +1,5 @@
 # phanpy
+**NOTE**: This project is no longer maintained. Please check out its successor, [pokemaster](https://github.com/kipyin/pokemaster)!
 
 A project for **P**okémon mec**HAN**isms for **PY**thon. ![](https://cdn.bulbagarden.net/upload/3/3b/Spr_3r_231.png)
 
